@@ -1,0 +1,156 @@
+name: Release
+# Builds the Windows installer from an exact version tag, attests its origin and publishes an
+# immutable GitHub Release. Runs only for a version tag (or a manual run naming one), never for
+# ordinary commits. The installer is NOT code-signed and is never described as signed.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build and publish, for example v0.7.0
+        required: false
+        type: string
+      dry_run:
+        description: Build and test the current branch without publishing (no tag needed)
+        required: false
+        type: boolean
+        default: false
+permissions: {}
+concurrency:
+  # One run per tag; a second run for the same tag waits and then fails on the existing release.
+  group: release-${{ inputs.dry_run && 'dry-run' || inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+  API_ORIGIN: https://tanrenway.com
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Refuse a malformed tag
+        shell: pwsh
+        run: |
+          if ($env:DRY_RUN -ne 'true' -and $env:TAG -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "Not a version tag: $env:TAG" }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.DRY_RUN == 'true' && github.sha || format('refs/tags/{0}', env.TAG) }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - name: Version, tag and commit agree
+        id: meta
+        shell: pwsh
+        run: |
+          $Version = python -c "import sys; sys.path.insert(0,'collector'); import tanren_collector as t; print(t.__version__)"
+          if ($env:DRY_RUN -ne 'true' -and "v$Version" -cne $env:TAG) { throw "Tag $env:TAG does not match __version__ $Version" }
+          if (git status --porcelain) { throw 'Checkout is not clean' }
+          "version=$Version" | Out-File $env:GITHUB_OUTPUT -Append
+      - name: Pinned Inno Setup 6.7.1 (hash-checked; build.ps1 verifies the compiler version again)
+        shell: pwsh
+        run: |
+          $Setup = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.1.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_1/innosetup-6.7.1.exe' -OutFile $Setup
+          $Hash = (Get-FileHash $Setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($Hash -cne '4d11e8050b6185e0d49bd9e8cc661a7a59f44959a621d31d11033124c4e8a7b0') { throw "Inno Setup hash mismatch: $Hash" }
+          $P = Start-Process $Setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-' -Wait -PassThru
+          if ($P.ExitCode -ne 0) { throw 'Inno Setup installation failed' }
+      - name: Isolated build interpreter
+        shell: pwsh
+        run: |
+          python -m venv "$env:RUNNER_TEMP/build-venv"
+          "$env:RUNNER_TEMP/build-venv/Scripts" | Out-File $env:GITHUB_PATH -Append
+      - name: Build (build.ps1 verifies pinned wheels, Python and Inno Setup versions)
+        shell: pwsh
+        run: ./collector/build/build.ps1 -ExpectedSourceSha (git rev-parse HEAD) -ApiOrigin $env:API_ORIGIN
+      - name: Tests with Windows DPAPI
+        shell: pwsh
+        env:
+          PYTHONPATH: collector
+          PYTHONUTF8: '1'
+        run: |
+          python -m pip install --require-hashes -r collector/public/test-requirements.lock
+          if ($LASTEXITCODE -ne 0) { throw 'Test dependency installation failed' }
+          python -m pytest collector/tests -q --deselect "collector/tests/test_application_runtime.py::test_tk_runtime_panel_actions_state_and_palettes"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Frozen smoke and isolated install/reinstall/uninstall
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: |
+          $P = Start-Process ./dist/TanrenCollector/TanrenCollector.exe -ArgumentList '--self-test' -Wait -PassThru
+          if ($P.ExitCode -ne 0) { throw 'Frozen executable smoke failed' }
+          $P = Start-Process ./dist/TanrenCollector/TanrenCollector.exe -ArgumentList '--qt-smoke','--screenshot-dir','dist/qt-screenshots' -Wait -PassThru
+          if ($P.ExitCode -ne 0) { throw 'Frozen Qt smoke failed' }
+          ./collector/build/installer-smoke.ps1
+      - name: Release files
+        shell: pwsh
+        run: |
+          $Version = '${{ steps.meta.outputs.version }}'
+          $Name = "TanrenCollectorSetup-$Version.exe"
+          New-Item -ItemType Directory release | Out-Null
+          Copy-Item dist/TanrenCollectorSetup.exe "release/$Name"
+          $File = Get-Item "release/$Name"
+          $Hash = (Get-FileHash $File -Algorithm SHA256).Hash.ToLowerInvariant()
+          $Commit = git rev-parse HEAD
+          $Date = git log -1 --format=%cs
+          [ordered]@{
+            version = $Version; file = $Name; sha256 = $Hash; size_bytes = $File.Length
+            built_at = $Date; released_at = $Date; source_commit = $Commit; signed = $false
+            repository = "${{ github.server_url }}/${{ github.repository }}"
+          } | ConvertTo-Json | Set-Content release/release.json -Encoding utf8NoBOM
+          "$Hash  $Name" | Set-Content release/SHA256SUMS.txt -Encoding utf8NoBOM
+          Copy-Item dist/BUILD_DEPENDENCIES.txt, dist/QT_INVENTORY.json release/
+          Get-Content release/release.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Configure the environment with the maintainers as required reviewers: nothing is published
+    # until a person approves this exact run.
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: release
+      - name: Checksums still match
+        working-directory: release
+        run: sha256sum --check --strict SHA256SUMS.txt
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            release/TanrenCollectorSetup-*.exe
+            release/release.json
+      - name: Publish (draft first, so every asset is attached before the release becomes immutable)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG already exists" >&2; exit 1; fi
+          gh release create "$TAG" --verify-tag --draft --title "Tanren Collector $VERSION" \
+            --notes "Windows installer for Tanren Collector $VERSION. Not code-signed: Windows SmartScreen will warn before it runs. SHA-256: $(cut -d' ' -f1 release/SHA256SUMS.txt). Verify the build origin with: gh attestation verify TanrenCollectorSetup-$VERSION.exe --repo $GH_REPO" \
+            release/*
+          gh release edit "$TAG" --draft=false --latest

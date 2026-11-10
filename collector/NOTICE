@@ -1,0 +1,13 @@
+Tanren Collector
+Copyright 2026 The Tanren Collector authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The Windows installer also contains third-party software under its own licenses,
+including Python, Qt for Python (PySide6) and Qt under the GNU LGPL version 3,
+NumPy, and the MetaTrader5 Python package. See THIRD_PARTY.md and the
+THIRD_PARTY_LICENSES folder of the installed application.
+
+"Tanren" and the Tanren logo are not licensed under the Apache License; see TRADEMARKS.md.
+MetaTrader is a registered trademark of MetaQuotes Ltd. Tanren Collector is an
+independent application for MetaTrader 5 and is not affiliated with or endorsed by MetaQuotes.

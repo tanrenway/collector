@@ -1,0 +1,7 @@
+{
+  "mode": "certificate-store",
+  "signtool": "C:/private-reviewed-tools/sdk/bin/10.0.26100.0/x64/signtool.exe",
+  "subject": "REPLACE_WITH_EXACT_VERIFIED_PUBLISHER_SUBJECT",
+  "thumbprint": "REPLACE_WITH_PUBLIC_CERTIFICATE_THUMBPRINT",
+  "timestamp": "http://timestamp.digicert.com"
+}

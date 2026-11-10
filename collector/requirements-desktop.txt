@@ -1,0 +1,6 @@
+# Windows x64 / CPython3.12. Qt GUI; stdlib Tk remains explicit fallback.
+-r qt/requirements.lock
+metatrader5==5.0.6231 \
+    --hash=sha256:b94b1f8f52087ae36dfac5f352a96f5d04fe308704d9515f82cf5d1470bc31d4
+numpy==2.5.4 \
+    --hash=sha256:a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a

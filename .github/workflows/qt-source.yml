@@ -1,0 +1,42 @@
+name: Qt corresponding source
+# One-time, manual: mirrors the exact Qt and Qt for Python source archives that the installer's
+# LGPLv3 notice points to, into the release named qt-source-<version>.
+on:
+  workflow_dispatch:
+    inputs:
+      qt_version:
+        description: Qt version, for example 6.11.2
+        required: true
+        type: string
+permissions: {}
+jobs:
+  mirror:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download and verify against Qt's published checksums
+        env:
+          QT: ${{ inputs.qt_version }}
+        run: |
+          [[ "$QT" =~ ^6\.[0-9]+\.[0-9]+$ ]] || { echo "Bad version" >&2; exit 1; }
+          minor="${QT%.*}"
+          base="https://download.qt.io/archive/qt/$minor/$QT/single"
+          mkdir src && cd src
+          curl -fsSLO "$base/qt-everywhere-src-$QT.tar.xz"
+          curl -fsSL "$base/md5sums.txt" | grep " qt-everywhere-src-$QT.tar.xz$" | md5sum --check --strict
+          curl -fsSLO "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-$QT-src/pyside-setup-everywhere-src-$QT.tar.xz"
+          sha256sum * > SHA256SUMS.txt
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          QT: ${{ inputs.qt_version }}
+        run: |
+          tag="qt-source-$QT"
+          if gh release view "$tag" >/dev/null 2>&1; then echo "Already published" >&2; exit 1; fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "Qt $QT corresponding source" \
+            --notes "Unmodified Qt $QT and Qt for Python $QT source archives, the corresponding source for the LGPLv3 Qt libraries in Tanren Collector installers built with Qt $QT." \
+            --latest=false src/*

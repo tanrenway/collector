@@ -1,0 +1,3 @@
+# Official Windows bridge, used only through the read allowlist in terminal.py.
+# Compatibility with the user's actual broker terminal must be verified before deployment.
+MetaTrader5==5.0.6231; sys_platform == "win32"

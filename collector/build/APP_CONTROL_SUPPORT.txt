@@ -1,0 +1,19 @@
+Tanren Collector - unsigned build / Windows App Control
+
+EN: This build has no publisher signature. Windows SmartScreen may ask you to confirm: choose More info, then Run anyway.
+Windows Security may quarantine it: open Protection history and choose Allow on device, or exclude only the Collector folder.
+Do not turn Windows Security off. If Smart App Control is On (Windows 11), Windows blocks every unsigned app and offers no
+Run anyway button; turning it off cannot be undone without reinstalling Windows, so decide for yourself.
+Company or school computers may need IT approval. Full steps are on the download page of the Tanren website.
+If it still fails, write to support with the Windows version, the file SHA256 and the text of the warning (error 4551 or
+Code Integrity events 3077/3033). Never send credentials, tokens, protected profiles, queues or personal paths.
+Contact: support@tanrenway.com
+
+UK: У цій збірці немає підпису видавця. Windows SmartScreen може попросити підтвердження: «Докладніше», потім «Все одно виконати».
+Безпека Windows може помістити файл у карантин: відкрийте «Журнал захисту» й виберіть «Дозволити на пристрої» або додайте у
+виключення лише папку Collector. Не вимикайте Безпеку Windows. Якщо Smart App Control увімкнено (Windows 11), Windows блокує всі
+непідписані програми без кнопки «Все одно виконати»; вимкнення не скасувати без перевстановлення Windows, тож вирішуйте самі.
+Службові й навчальні комп’ютери можуть потребувати погодження ІТ. Повні кроки є на сторінці завантаження сайту Tanren.
+Якщо не допомагає, напишіть у підтримку: версія Windows, SHA256 файла й текст попередження (помилка 4551 або події Code Integrity
+3077/3033). Не надсилайте паролі, токени, захищені профілі, черги чи персональні шляхи.
+Контакт: support@tanrenway.com

@@ -1,0 +1,39 @@
+name: CI
+# Source checks for pull requests and the main branch. No installer is built here.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12.10'
+      - name: Install pinned dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libgl1 libopengl0 libxkbcommon0 libdbus-1-3
+          python -m pip install --require-hashes --only-binary=:all: -r collector/qt/requirements.lock
+          python -m pip install --require-hashes -r collector/public/test-requirements.lock
+      - name: Tests (synthetic only; no MetaTrader 5, no network)
+        env:
+          PYTHONPATH: collector
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: python -m pytest collector/tests -q
+      - name: Qt smoke
+        env:
+          PYTHONPATH: collector
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+        run: python collector/desktop_entry.py --qt-smoke --screenshot-dir "$RUNNER_TEMP/qt-smoke"

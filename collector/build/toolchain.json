@@ -1,0 +1,28 @@
+{
+  "python": "3.12.10",
+  "inno_setup": "6.7.1",
+  "sdk": {
+    "version": "10.0.26100.9169",
+    "url": "https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.buildtools/10.0.26100.9169/microsoft.windows.sdk.buildtools.10.0.26100.9169.nupkg",
+    "sha256": "6000c971fc9155052a8359779b30b6682c39e091664d83b3852c4702ab6d238e",
+    "file": "bin/10.0.26100.0/x64/signtool.exe",
+    "file_sha256": "92a5751c292c7d3c41619ca0f0a28d1121cf55ef55d75dcce394bf01f0194193"
+  },
+  "artifact_client": {
+    "version": "1.0.95",
+    "url": "https://api.nuget.org/v3-flatcontainer/microsoft.trusted.signing.client/1.0.95/microsoft.trusted.signing.client.1.0.95.nupkg",
+    "sha256": "3bfcf1e0a3cb42af1692f0a8ed45c15de070c2de86f28a59b2795d904d8a920f",
+    "file": "bin/x64/Azure.CodeSigning.Dlib.dll",
+    "file_sha256": "a359b420f676bc0223a379a84ca8369588ae7f265fd4f3e761e3425cba376916"
+  },
+  "qt": {
+    "pyside6_essentials": "6.11.2",
+    "shiboken6": "6.11.2",
+    "style": "Basic",
+    "qml_roots": [
+      "QtQml",
+      "QtQuick"
+    ],
+    "native_validation": "pending"
+  }
+}
