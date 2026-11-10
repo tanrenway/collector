@@ -94,8 +94,21 @@ jobs:
             "::warning title=Tk unavailable in the build venv::Tk tests deselected; the frozen --self-test still starts Tk"
             $Deselect += 'collector/tests/test_desktop.py::test_native_tray_and_resume_dispatch'
           }
-          python -m pytest collector/tests -q @($Deselect | ForEach-Object { '--deselect'; $_ })
+          $Pick = @($Deselect | ForEach-Object { '--deselect'; $_ })
+          # Real Tk windows: many Tcl interpreters in one Windows process eventually stop reading
+          # their own library files, so each Tk window test runs in a fresh process instead.
+          $TkFiles = @('collector/tests/test_desktop.py', 'collector/tests/test_desktop_redesign.py')
+          python -m pytest collector/tests -q @Pick @($TkFiles | ForEach-Object { "--ignore=$_" })
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $Ids = python -m pytest @TkFiles --collect-only -q @Pick | Where-Object { $_ -like 'collector/tests/*::*' }
+          if (-not $Ids) { throw 'No Tk window tests collected' }
+          $Failed = @()
+          foreach ($Id in $Ids) {
+            python -m pytest $Id -q -p no:cacheprovider
+            if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 5) { $Failed += $Id }
+          }
+          "Tk window tests run in separate processes: $($Ids.Count)"
+          if ($Failed) { throw "Failed: $($Failed -join ', ')" }
       - name: Frozen smoke and isolated install/reinstall/uninstall
         shell: pwsh
         env:
