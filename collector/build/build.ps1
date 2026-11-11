@@ -111,7 +111,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Dependency provenance collection failed' }
     $Info = [ordered]@{ source_commit=$Commit; source_clean=(-not $Dirty); api_origin=$ApiOrigin.TrimEnd('/');
         python=$PythonVersion; inno=$Version; inputs=$InputHashes; signed_uninstaller=$Trusted;
-        candidate_version='0.7.0'; minimum_windows_candidate=$MinimumWindowsVersion; os_support_verified=$false;
+        candidate_version='0.7.1'; minimum_windows_candidate=$MinimumWindowsVersion; os_support_verified=$false;
         source_date_epoch=$Epoch; python_hash_seed='0';
         publisher=$(if ($Trusted) {$Config.subject} else {''});
         provider=$(if ($Trusted) {$Config.mode} else {'unsigned-review'});

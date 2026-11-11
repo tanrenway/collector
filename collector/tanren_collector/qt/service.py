@@ -17,8 +17,11 @@ from ..palette_tokens import LEGACY_PALETTES, PALETTES
 from ..storage import DPAPI, load_config, save_config
 from ..windows import autostart, autostart_enabled
 
+# Palettes used by the automatic theme ("system"): same mapping as the web (owner decision
+# 2026-11-11). New installs follow Windows light/dark; a saved explicit palette is kept.
+SYSTEM_PALETTES = {"dark": "graphite", "light": "ivory"}
 DEFAULTS = {
-    "palette": "obsidian",
+    "palette": "system",
     "locale": "en",
     "reduced_motion": False,
     "close_to_tray": True,
@@ -61,7 +64,9 @@ class RuntimeService(QObject):
             saved = load_config(self.path, self.protector) if self.path.exists() else {}
             self.settings = {**DEFAULTS, **saved}
             palette = LEGACY_PALETTES.get(self.settings["palette"], self.settings["palette"])
-            self.settings["palette"] = palette if palette in PALETTES else DEFAULTS["palette"]
+            self.settings["palette"] = (
+                palette if palette in PALETTES or palette == "system" else DEFAULTS["palette"]
+            )
             if os.name == "nt":
                 self.settings["autostart"] = autostart_enabled()
             self.runtime = self.runtime_factory(self.root)
@@ -134,7 +139,7 @@ class RuntimeService(QObject):
                     if key in {"palette", "locale"}:
                         if key == "locale" and value not in {"en", "uk"}:
                             raise ValueError("INVALID_RUNTIME_ACTION")
-                        if key == "palette" and value not in PALETTES:
+                        if key == "palette" and value not in PALETTES and value != "system":
                             raise ValueError("INVALID_RUNTIME_ACTION")
                     elif key in {"window_width", "window_height"}:
                         low, high = (640, 2560) if key == "window_width" else (540, 1600)

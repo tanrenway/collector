@@ -31,9 +31,15 @@ ApplicationWindow {
     function accountOptions() { return (ui.state.accounts || []).map((a,i) => ({value:a.binding_id,label:(a.name || t("accounts") + " · " + (i+1))})) }
     function select(binding) { ui.selectAccount(binding); detailChoice.selectedValue=binding; detailChoice.restore(); migrationChoice.selectedValue=binding; migrationChoice.restore(); screenIndex=4 }
     function confirm(kind) { confirmKind=kind; confirmation.open() }
+    function submitPair() {
+        if (pairCode.text.trim().length===0 || deviceName.text.trim().length===0) return
+        if (root.repairing) root.confirm("repair"); else if (ui.pair(pairCode.text,deviceName.text,false,false)) pairCode.text=""
+    }
     function accountLine(a) { return root.value(a.broker)+(a.login_suffix ? " · •••• "+a.login_suffix : "") }
     function accountStatus(a) {
         if (!a || !a.binding_id) return {label:t("statusChecking"),kind:"neutral"}
+        // Q-01: without an authorised device nothing syncs — never show a green "Syncing".
+        if ((ui.state.device || {}).state!=="paired") return {label:t("statusDevicePaused"),kind:"warning"}
         if (a.stage==="paused") return {label:t("statusPaused"),kind:"neutral"}
         if (["authorization_required","awaiting_handover","continuity_review","access_denied"].includes(a.stage)) return {label:t("statusAction"),kind:"warning"}
         if (a.stage==="waiting" || a.error) return {label:t("statusRetrying"),kind:"warning"}
@@ -189,10 +195,10 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 C.Copy { visible: root.repairing; text: root.t("repairWarning"); color: ui.colors.warning; Layout.fillWidth: true }
                                 C.Copy { text: root.t("pairHint"); secondary: true; Layout.fillWidth: true }
-                                C.Field { id: deviceName; objectName: "deviceName"; label: root.t("deviceName"); Layout.fillWidth: true }
-                                C.Field { id: pairCode; objectName: "pairCode"; label: root.t("pairCode"); secret: true; Layout.fillWidth: true }
+                                C.Field { id: deviceName; objectName: "deviceName"; label: root.t("deviceName"); Layout.fillWidth: true; onAccepted: root.submitPair() }
+                                C.Field { id: pairCode; objectName: "pairCode"; label: root.t("pairCode"); secret: true; Layout.fillWidth: true; onAccepted: root.submitPair() }
                                 Flow { Layout.fillWidth: true; spacing: 10
-                                    C.Action { objectName: "pairButton"; enabled: pairCode.text.trim().length>0 && deviceName.text.trim().length>0; text: root.t("pair"); primary: true; loading: ui.command.action==="pair" && ["submitted","pending"].includes(ui.command.phase); onClicked: { if(root.repairing) root.confirm("repair"); else if (ui.pair(pairCode.text,deviceName.text,false,false)) pairCode.text="" } }
+                                    C.Action { objectName: "pairButton"; enabled: pairCode.text.trim().length>0 && deviceName.text.trim().length>0; text: root.t("pair"); primary: true; loading: ui.command.action==="pair" && ["submitted","pending"].includes(ui.command.phase); onClicked: root.submitPair() }
                                     C.Action { text: root.t("browser"); onClicked: ui.openBrowser() }
                                 }
                                 C.Badge { label: root.t((ui.state.device || {}).state || "disconnected"); kind: (ui.state.device || {}).state === "paired" ? "positive" : "warning" }
@@ -238,7 +244,7 @@ ApplicationWindow {
                             Repeater { model: (ui.state.accounts || []).slice(0,5)
                                 C.Card { required property var modelData; Layout.fillWidth: true
                                     RowLayout { Layout.fillWidth: true; spacing: 10; C.Copy { text: modelData.name || root.t("accounts"); size: 16; font.weight: Font.DemiBold; Layout.fillWidth: true } C.Badge { label: root.accountStatus(modelData).label; kind: root.accountStatus(modelData).kind }
-                                        C.Action { id: moreButton; objectName: "accountMenu"+modelData.binding_id; variant: "icon"; iconName: "more"; text: root.t("details"); onClicked: actionsMenu.open() }
+                                        C.Action { id: moreButton; objectName: "accountMenu"+modelData.binding_id; variant: "icon"; iconName: "more"; text: root.t("details") + " — " + (modelData.name || root.t("accounts")); onClicked: actionsMenu.open() }
                                         C.AccountMenu { id: actionsMenu; objectName: "actionsMenu"+modelData.binding_id; parent: moreButton; y: moreButton.height+4; x: moreButton.width-width; bindingId: modelData.binding_id; onDetailsRequested: root.select(modelData.binding_id) }
                                     }
                                     C.Copy { text: root.accountLine(modelData); secondary: true; Layout.fillWidth: true }
@@ -257,7 +263,7 @@ ApplicationWindow {
                             Repeater { model: ui.state.accounts || []
                                 C.Card { required property var modelData; Layout.fillWidth: true
                                     RowLayout { Layout.fillWidth: true; spacing: 10; C.Copy { text: modelData.name || root.t("accounts"); font.weight: Font.DemiBold; size: 18; Layout.fillWidth: true } C.Badge { label: root.accountStatus(modelData).label; kind: root.accountStatus(modelData).kind }
-                                        C.Action { id: listMoreButton; objectName: "listAccountMenu"+modelData.binding_id; variant: "icon"; iconName: "more"; text: root.t("details"); onClicked: listActionsMenu.open() }
+                                        C.Action { id: listMoreButton; objectName: "listAccountMenu"+modelData.binding_id; variant: "icon"; iconName: "more"; text: root.t("details") + " — " + (modelData.name || root.t("accounts")); onClicked: listActionsMenu.open() }
                                         C.AccountMenu { id: listActionsMenu; objectName: "listActionsMenu"+modelData.binding_id; parent: listMoreButton; y: listMoreButton.height+4; x: listMoreButton.width-width; bindingId: modelData.binding_id; onDetailsRequested: root.select(modelData.binding_id) }
                                     }
                                     C.Copy { text: root.accountLine(modelData); secondary: true; Layout.fillWidth: true }
@@ -387,8 +393,10 @@ ApplicationWindow {
                                 C.Copy { text: root.t("language"); secondary: true; size: 13; Layout.fillWidth: true }
                                 RowLayout { Layout.fillWidth: true; spacing: 10; C.Action { objectName: "languageEn"; text: "English"; Layout.preferredWidth: 132; primary: ui.preferences.locale==="en"; onClicked: ui.preference("locale","en") } C.Action { objectName: "languageUk"; text: "Українська"; Layout.preferredWidth: 132; primary: ui.preferences.locale==="uk"; onClicked: ui.preference("locale","uk") } Item { Layout.fillWidth: true } }
                                 C.Copy { text: root.t("palette"); secondary: true; size: 13; Layout.fillWidth: true }
+                                C.Toggle { objectName: "paletteSystem"; label: root.t("paletteSystem"); checked: ui.preferences.palette==="system"; onClicked: { let desired=checked; checked=Qt.binding(() => ui.preferences.palette==="system"); ui.preference("palette", desired ? "system" : ui.resolvedPalette) } Layout.fillWidth: true }
+                                C.Copy { visible: ui.preferences.palette==="system"; text: root.t("paletteSystemHint"); secondary: true; size: 12; Layout.fillWidth: true }
                                 GridLayout { objectName: "paletteGrid"; Layout.fillWidth: true; columns: root.width>=1400 ? 6 : 3; columnSpacing: 10; rowSpacing: 10
-                                    Repeater { model: ui.paletteCatalog; C.PaletteCard { required property var modelData; option: modelData; objectName: "palette"+modelData.id; Layout.fillWidth: true; Layout.preferredWidth: 1; selected: ui.preferences.palette===modelData.id; schemeLabel: root.t(modelData.scheme); selectedLabel: root.t("selected"); onClicked: ui.preference("palette",modelData.id) } }
+                                    Repeater { model: ui.paletteCatalog; C.PaletteCard { required property var modelData; option: Object.assign({}, modelData, {name: root.t("palette_"+modelData.id)}); objectName: "palette"+modelData.id; Layout.fillWidth: true; Layout.preferredWidth: 1; selected: ui.preferences.palette===modelData.id; schemeLabel: root.t(modelData.scheme); selectedLabel: root.t("selected"); onClicked: ui.preference("palette",modelData.id) } }
                                 }
                                 C.Copy { text: root.t("behaviour"); secondary: true; size: 13; Layout.fillWidth: true }
                                 C.Toggle { objectName: "reducedMotion"; label: root.t("motion"); checked: ui.reducedMotion; onClicked: { let desired=checked; checked=Qt.binding(() => ui.reducedMotion); ui.preference("reduced_motion",desired) } Layout.fillWidth: true }
@@ -497,7 +505,7 @@ ApplicationWindow {
             C.Copy { text: root.t(root.confirmKind==="repair" ? "repairWarning" : root.confirmKind==="disconnect" ? "disconnectWarning" : "quitHint"); secondary: true; Layout.fillWidth: true }
             Flow { Layout.fillWidth: true; spacing: 10
                 C.Action { id: confirmCancelButton; objectName: "confirmCancel"; text: root.t("cancel"); onClicked: confirmation.close() }
-                C.Action { objectName: "confirmAccept"; text: root.t("confirm"); primary: true; onClicked: { confirmation.close(); if(root.confirmKind==="quit") { if(!ui.synthetic) ui.saveWindow(Math.min(2560,root.width),Math.min(1600,root.height),root.visibility===Window.Maximized); ui.stopRequested() } else if(root.confirmKind==="disconnect") ui.disconnect(); else { if(ui.pair(pairCode.text,deviceName.text,true,true)) { pairCode.text=""; root.repairing=false } } } }
+                C.Action { objectName: "confirmAccept"; text: root.t(root.confirmKind==="disconnect" ? "disconnectAction" : root.confirmKind==="repair" ? "repairAction" : "quitAction"); variant: root.confirmKind==="quit" ? "primary" : "destructive"; onClicked: { confirmation.close(); if(root.confirmKind==="quit") { if(!ui.synthetic) ui.saveWindow(Math.min(2560,root.width),Math.min(1600,root.height),root.visibility===Window.Maximized); ui.stopRequested() } else if(root.confirmKind==="disconnect") ui.disconnect(); else { if(ui.pair(pairCode.text,deviceName.text,true,true)) { pairCode.text=""; root.repairing=false } } } }
             }
         }
         Overlay.modal: Rectangle { color: ui.colors.scrim }

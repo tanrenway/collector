@@ -92,8 +92,92 @@ PAIRS = {
         "Немає зв’язку з Tanren. Collector спробує ще раз сам, ваші дані в безпеці.",
     ),
     "authHelp": (
-        "Access for this computer needs checking. Open Collector on the Tanren site.",
-        "Потрібно перевірити доступ цього комп’ютера. Відкрийте розділ Collector на сайті Tanren.",
+        (
+            "This computer no longer has access to your Tanren account: it was unlinked or its "
+            "access was revoked on the website, or the sign-in expired. Your journal is safe. "
+            "Create a new code on the Collector page of the Tanren site and pair again."
+        ),
+        (
+            "Цей комп’ютер більше не має доступу до вашого акаунта Tanren: його відв’язали чи "
+            "відкликали доступ на сайті, або вхід застарів. Ваш журнал у безпеці. Створіть "
+            "новий код на сторінці Collector на сайті Tanren і підключіть комп’ютер знову."
+        ),
+    ),
+    "conflictHelp": (
+        (
+            "This MetaTrader 5 account is already linked to another Tanren account or "
+            "computer. Nothing was changed. Check that you are signed in to the right Tanren "
+            "account, or unlink the account there first."
+        ),
+        (
+            "Цей рахунок MetaTrader 5 уже прив’язано до іншого акаунта Tanren або комп’ютера. "
+            "Нічого не змінено. Перевірте, що ви в правильному акаунті Tanren, або спершу "
+            "відв’яжіть рахунок там."
+        ),
+    ),
+    "scopeHelp": (
+        (
+            "This computer is not allowed to send this account. Check which accounts it may "
+            "sync on the Collector page of the Tanren site."
+        ),
+        (
+            "Цьому комп’ютеру не дозволено надсилати цей рахунок. Перевірте, які рахунки він "
+            "може синхронізувати, на сторінці Collector на сайті Tanren."
+        ),
+    ),
+    "statusDevicePaused": (
+        "Paused — computer not connected",
+        "Призупинено — комп’ютер не підключено",
+    ),
+    "disconnectAction": (
+        "Disconnect computer",
+        "Відключити комп’ютер",
+    ),
+    "repairAction": (
+        "Pair again",
+        "Підключити знову",
+    ),
+    "quitAction": (
+        "Quit Collector",
+        "Закрити Collector",
+    ),
+    "paletteSystem": (
+        "Match Windows (light or dark)",
+        "Як у Windows (світла чи темна)",
+    ),
+    "paletteSystemHint": (
+        (
+            "Horizon Graphite in dark mode, Horizon Paper in light mode. Choosing a palette "
+            "below switches this off."
+        ),
+        (
+            "Horizon Графіт у темному режимі, Horizon Папір у світлому. Вибір палітри нижче "
+            "вимикає цей режим."
+        ),
+    ),
+    "palette_obsidian": (
+        "Horizon Night",
+        "Horizon Ніч",
+    ),
+    "palette_midnight": (
+        "Horizon Night Cyan",
+        "Horizon Ніч Ціан",
+    ),
+    "palette_graphite": (
+        "Horizon Graphite",
+        "Horizon Графіт",
+    ),
+    "palette_carbon": (
+        "Horizon Ember",
+        "Horizon Жар",
+    ),
+    "palette_arctic": (
+        "Horizon Day",
+        "Horizon День",
+    ),
+    "palette_ivory": (
+        "Horizon Paper",
+        "Horizon Папір",
     ),
     "standbyHelp": (
         "This account is being synced from another computer.",

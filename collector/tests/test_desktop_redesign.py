@@ -325,6 +325,6 @@ def test_review_version_matches_protocol_and_windows_package():
     from tanren_collector.protocol import VERSION
 
     root = Path(__file__).resolve().parents[1]
-    assert VERSION == __version__ == "0.7.0"
-    assert '#define Version "0.7.0"' in (root / "build/installer.iss").read_text()
-    assert "filevers=(0,7,0,0)" in (root / "build/version-info.txt").read_text()
+    assert VERSION == __version__ == "0.7.1"
+    assert '#define Version "0.7.1"' in (root / "build/installer.iss").read_text()
+    assert "filevers=(0,7,1,0)" in (root / "build/version-info.txt").read_text()

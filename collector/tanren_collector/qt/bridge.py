@@ -1,5 +1,6 @@
 """Narrow typed Qt slots + presentation properties; no secret/store/API/native objects exposed."""
 
+import contextlib
 import json
 import re
 import threading
@@ -23,7 +24,7 @@ from PySide6.QtCore import (
 from .. import __version__, diagnostics_log
 from ..prop_firms import PROP_FIRMS, suggest_firm
 from ..updater import Updater
-from .service import DEFAULTS
+from .service import DEFAULTS, SYSTEM_PALETTES
 from .strings import words
 
 ASSETS = Path(__file__).parent
@@ -73,6 +74,14 @@ class Bridge(QObject):
         self._update = {"state": "idle"}
         self._update_manifest = None
         self._update_file = None
+        # "system" palette follows the Windows light/dark setting (Qt colour scheme) live.
+        # No GUI application (tests, probes): the palette simply stays static.
+        with contextlib.suppress(Exception):
+            from PySide6.QtGui import QGuiApplication
+
+            hints = QGuiApplication.styleHints()
+            if hints is not None and hasattr(hints, "colorSchemeChanged"):
+                hints.colorSchemeChanged.connect(lambda *_: self.settingsChanged.emit())
         self._update_busy = False
         self._updater = Updater()
         self._updateFinished.connect(self._apply_update)
@@ -127,9 +136,26 @@ class Bridge(QObject):
     def words(self):
         return words(self._settings["locale"])
 
+    @Property(str, notify=settingsChanged)
+    def resolvedPalette(self):
+        """Effective palette id: the saved choice, or the system scheme's palette for "system"."""
+        palette = self._settings.get("palette", DEFAULTS["palette"])
+        if palette != "system":
+            return palette if palette in DESIGN["palettes"] else SYSTEM_PALETTES["dark"]
+        scheme = "dark"
+        try:
+            from PySide6.QtGui import QGuiApplication
+
+            hints = QGuiApplication.styleHints()
+            if hints is not None and hints.colorScheme() == Qt.ColorScheme.Light:
+                scheme = "light"
+        except Exception:  # noqa: BLE001 - headless/older Qt: dark default
+            scheme = "dark"
+        return SYSTEM_PALETTES[scheme]
+
     @Property("QVariantMap", notify=settingsChanged)
     def colors(self):
-        result = dict(DESIGN["palettes"][self._settings["palette"]])
+        result = dict(DESIGN["palettes"][self.resolvedPalette])
         for key, value in result.items():
             if isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{8}", value):
                 result[key] = "#" + value[-2:] + value[1:-2]
@@ -383,6 +409,10 @@ class Bridge(QObject):
             )
             else "continuityHelp"
             if "CONTINUITY" in code
+            else "conflictHelp"
+            if "409" in code or "CONFLICT" in code or "IDENTITY" in code
+            else "scopeHelp"
+            if "SCOPE" in code
             else "networkHelp"
         )
         return self.words[key]

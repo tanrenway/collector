@@ -16,6 +16,7 @@ legal advice and not a replacement for those texts.
 | Microsoft Visual C++ runtime DLLs (shipped inside the Python wheels) | — | Microsoft redistributable code |
 | PyInstaller bootloader | 6.22.3 | GPL-2.0-or-later with the PyInstaller bootloader exception |
 | Inno Setup (installer and uninstaller) | 6.7.1 | Inno Setup License |
+| Onest font (static Regular/Medium/SemiBold/Bold instances, Latin and Cyrillic), © 2021 The Onest Project Authors | 5.x (fontsource variable build) | SIL Open Font License 1.1 (`Onest/OFL.txt`) |
 
 ## Qt under the GNU LGPL version 3
 

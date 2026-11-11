@@ -48,6 +48,12 @@ def collect(destination):
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(source, target)
     shutil.copytree(Path(__file__).parent / "qt-licenses", destination / "Qt", dirs_exist_ok=True)
+    # Bundled UI font (static Onest instances, SIL Open Font License 1.1).
+    font_license = Path(__file__).parents[1] / "tanren_collector/qt/assets/fonts/OFL.txt"
+    if not font_license.is_file():
+        raise RuntimeError("Onest font license missing")
+    (destination / "Onest").mkdir(exist_ok=True)
+    shutil.copy2(font_license, destination / "Onest" / "OFL.txt")
     own = destination / "Tanren-Collector"
     own.mkdir(exist_ok=True)
     for notice in ROOT_NOTICES:

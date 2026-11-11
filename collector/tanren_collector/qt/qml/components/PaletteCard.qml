@@ -28,10 +28,21 @@ Button {
             Image { visible: card.selected; Layout.preferredWidth: 16; Layout.preferredHeight: 16; source: ui.icon("check", ui.colors.accent); Accessible.ignored: true }
         }
     }
+    // Selected = accent border + soft fill + check mark; keyboard focus = a separate outer
+    // ring in the focus colour, so a focused card is never mistaken for the selected one (Q-04).
     background: Rectangle {
         radius: ui.tokens["radius-control"] + 2
         color: card.selected ? ui.colors.accentSoft : card.hovered ? ui.colors.hover : "transparent"
-        border.width: card.selected || card.visualFocus ? 2 : 1
-        border.color: card.selected || card.visualFocus ? ui.colors.focus : ui.colors.line
+        border.width: card.selected ? 2 : 1
+        border.color: card.selected ? ui.colors.accent : ui.colors.line
+        Rectangle {
+            visible: card.visualFocus
+            anchors.fill: parent
+            anchors.margins: -4
+            radius: parent.radius + 4
+            color: "transparent"
+            border.width: 2
+            border.color: ui.colors.focus
+        }
     }
 }

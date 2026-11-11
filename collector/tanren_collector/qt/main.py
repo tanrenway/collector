@@ -41,8 +41,16 @@ def main(background=False):
     app.setApplicationName(current().display_name)
     app.setQuitOnLastWindowClosed(False)
     QQuickStyle.setStyle("Basic")
+    # Bundled Onest (same UI font as the web; OFL 1.1) with Ukrainian and Latin glyphs. If the
+    # files cannot be loaded, fall back to the platform font as before.
+    fonts = Path(__file__).parent / "assets" / "fonts"
+    loaded = [
+        QFontDatabase.addApplicationFont(str(path)) for path in sorted(fonts.glob("Onest-*.ttf"))
+    ]
     family = (
-        "Inter"
+        "Onest"
+        if any(i >= 0 for i in loaded) and "Onest" in QFontDatabase.families()
+        else "Inter"
         if "Inter" in QFontDatabase.families()
         else "Segoe UI"
         if "Segoe UI" in QFontDatabase.families()

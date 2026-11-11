@@ -1,4 +1,4 @@
-#define Version "0.7.0"
+#define Version "0.7.1"
 #ifdef EngineeringBuild
 #define AppIdentity "{{C7E48B92-68D5-4C31-9177-503BA7F62DB8}"
 #define DisplayName "Tanren Collector Engineering"
@@ -24,7 +24,7 @@
 AppId={#AppIdentity}
 AppName={#DisplayName}
 AppVersion={#Version}
-VersionInfoVersion=0.7.0.0
+VersionInfoVersion=0.7.1.0
 AppVerName={#DisplayName} {#Version}
 DefaultDirName={localappdata}\Programs\{#DisplayName}
 DefaultGroupName={#GroupName}

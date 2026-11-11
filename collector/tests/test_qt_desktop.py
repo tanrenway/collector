@@ -465,12 +465,51 @@ def test_stopping_service_ignores_already_queued_tick_and_resume(app, tmp_path):
 
 
 def test_service_maps_retired_saved_palettes_on_load(app, tmp_path):
-    for saved, expected in (("forest", "carbon"), ("slate", "obsidian"), ("unknown", "obsidian")):
+    # Unknown values fall back to the default automatic theme; explicit choices are kept.
+    for saved, expected in (
+        ("forest", "carbon"),
+        ("slate", "obsidian"),
+        ("unknown", "system"),
+        ("obsidian", "obsidian"),
+        ("system", "system"),
+    ):
         save_config(tmp_path / "settings.dpapi", {"palette": saved}, TestProtector())
         service = RuntimeService(tmp_path, Runtime, TestProtector)
         service.start()
         service.timer.stop()
         assert service.settings["palette"] == expected
+
+
+def test_new_install_follows_system_theme_and_resolves_palette(app, tmp_path, monkeypatch):
+    from tanren_collector.qt.bridge import Bridge
+    from tanren_collector.qt.service import DEFAULTS, SYSTEM_PALETTES
+
+    assert DEFAULTS["palette"] == "system"
+    assert SYSTEM_PALETTES == {"dark": "graphite", "light": "ivory"}
+    service = RuntimeService(tmp_path, Runtime, TestProtector)
+    service.start()
+    service.timer.stop()
+    assert service.settings["palette"] == "system"
+    bridge = Bridge(True)
+    bridge.updateSettings({"palette": "system"})
+    assert bridge.resolvedPalette in {"graphite", "ivory"}
+    assert bridge.colors["canvas"]
+    bridge.updateSettings({"palette": "carbon"})
+    assert bridge.resolvedPalette == "carbon"
+
+
+def test_errors_are_explained_by_cause_not_as_network(app):
+    from tanren_collector.qt.bridge import Bridge
+
+    bridge = Bridge(True)
+    bridge.updateSettings({"locale": "en"})
+    words = bridge.words
+    assert bridge.explain("REGISTRATION_HTTP_409") == words["conflictHelp"]
+    assert bridge.explain("IDENTITY_CONFLICT") == words["conflictHelp"]
+    assert bridge.explain("DEVICE_SCOPE_MISMATCH") == words["scopeHelp"]
+    assert bridge.explain("SYNC_PAUSED_HTTP_401") == words["authHelp"]
+    assert bridge.explain("NETWORK_TIMEOUT") == words["networkHelp"]
+    assert "unlinked" in words["authHelp"]
 
 
 def test_update_flow_states_and_shutdown(app, monkeypatch):

@@ -7,6 +7,8 @@ ColumnLayout {
     property alias text: input.text
     property alias placeholderText: input.placeholderText
     property bool secret: false
+    // Enter/Return in the field submits the surrounding form (Q-04).
+    signal accepted()
     spacing: 7
     Copy { text: field.label; secondary: true; size: 13; Layout.fillWidth: true }
     TextField {
@@ -23,6 +25,7 @@ ColumnLayout {
         maximumLength: field.secret ? 32 : 200
         echoMode: field.secret ? TextInput.Password : TextInput.Normal
         Accessible.name: field.label
+        onAccepted: field.accepted()
         background: Rectangle { radius: ui.tokens["radius-control"]; color: ui.colors.input; border.color: input.activeFocus ? ui.colors.focus : ui.colors.line; border.width: input.activeFocus ? 2 : 1 }
     }
 }
