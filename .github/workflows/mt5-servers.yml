@@ -1,0 +1,38 @@
+name: MT5 server catalog (research)
+# Research only: does the official MetaTrader 5 terminal on Windows find prop-firm servers by
+# name, and what does its servers.dat contain afterwards? Uses a synthetic login only; no
+# account credentials exist in this repository or in this run. Nothing is published.
+on:
+  push:
+    branches: [servers-catalog]
+permissions:
+  contents: read
+jobs:
+  catalog:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12.10'
+      - name: Install the official MetaTrader 5 terminal
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe -OutFile mt5setup.exe
+          Start-Process .\mt5setup.exe -ArgumentList '/auto'
+          $exe = 'C:\Program Files\MetaTrader 5\terminal64.exe'
+          for ($i = 0; $i -lt 120; $i++) { if ((Test-Path $exe) -and -not (Get-Process mt5setup -ErrorAction SilentlyContinue)) { break }; Start-Sleep 5 }
+          Start-Sleep 60
+          Get-Process terminal64 -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Item $exe | Format-List FullName, Length, LastWriteTime
+      - name: Probe prop-firm servers with a synthetic login
+        run: |
+          python -m pip install --disable-pip-version-check MetaTrader5==5.0.6231 pillow==11.3.0 pywinauto==0.6.9
+          python tools/mt5_servers_probe.py ACGMarkets-Main FivePercentOnline-Real
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mt5-servers-research
+          path: probe-out/
+          retention-days: 7
