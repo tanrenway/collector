@@ -31,6 +31,15 @@ def controls(window):
     return rows
 
 
+def back():
+    """The wizard's Back button: the Button whose text mentions Back (mnemonic-safe)."""
+    for button in dlg.descendants(class_name="Button"):
+        if "back" in button.window_text().replace("&", "").lower():
+            button.click()
+            return
+    raise RuntimeError("no Back button")
+
+
 subprocess.Popen([TERMINAL, "/portable"])
 time.sleep(60)
 app = Application(backend="win32").connect(path=TERMINAL, timeout=60)
@@ -46,7 +55,7 @@ for index in range(total):
     entry = {"index": index, "servers": []}
     try:
         listview.select(index)
-        dlg.child_window(title="Next >").click()
+        dlg.child_window(control_id=12324).click()
         time.sleep(4)
         if index == 0:
             (OUT / "page2-controls.txt").write_text("\n".join(controls(dlg)), encoding="utf-8")
@@ -67,12 +76,12 @@ for index in range(total):
             text = edit.window_text()
             if text and len(text) < 80 and ("Ltd" in text or "Limited" in text or "LLC" in text):
                 entry.setdefault("labels", []).append(text)
-        dlg.child_window(title="< Back").click()
+        back()
         time.sleep(3)
     except Exception as exc:  # noqa: BLE001
         entry["error"] = repr(exc)[:200]
         try:
-            dlg.child_window(title="< Back").click()
+            back()
         except Exception:  # noqa: BLE001
             pass
     report["companies"].append(entry)
