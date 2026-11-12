@@ -29,7 +29,7 @@ jobs:
       - name: Probe prop-firm servers with a synthetic login
         run: |
           python -m pip install --disable-pip-version-check MetaTrader5==5.0.6231 pillow==11.3.0 pywinauto==0.6.9
-          python tools/mt5_servers_probe.py ACGMarkets-Main FivePercentOnline-Real
+          python tools/mt5_search_probe.py "ACG" "Five Percent"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
