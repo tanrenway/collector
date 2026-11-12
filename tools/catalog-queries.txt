@@ -40,3 +40,6 @@ Blueberry Markets
 GBE brokers
 IC Markets
 Pepperstone
+Audacity Global
+AudaCity Global
+audacity.capital
