@@ -10,7 +10,7 @@ permissions:
 jobs:
   catalog:
     runs-on: windows-2025
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -29,7 +29,7 @@ jobs:
       - name: Probe prop-firm servers with a synthetic login
         run: |
           python -m pip install --disable-pip-version-check MetaTrader5==5.0.6231 pillow==11.3.0 pywinauto==0.6.9
-          python tools/mt5_catalog_probe.py "ACG Markets" "acgmarkets.com" "Five Percent Online" "the5ers.com" -- ACGMarkets-Main FivePercentOnline-Real MetaQuotes-Demo
+          python tools/mt5_catalog_build.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
