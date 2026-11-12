@@ -75,7 +75,7 @@ shutil.copy(DATA / "Config" / "servers.dat", OUT / "servers-catalog.dat")
 
 import MetaTrader5 as mt5  # noqa: E402
 
-for server in report["servers"][:150]:
+for server in []:
     started = time.monotonic()
     ok = mt5.initialize(
         TERMINAL, login=10000001, password="synthetic-probe", server=server, timeout=30000, portable=True
