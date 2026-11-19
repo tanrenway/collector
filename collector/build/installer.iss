@@ -1,15 +1,18 @@
-#define Version "0.7.1"
+#define Version "0.8.0"
 #ifdef EngineeringBuild
 #define AppIdentity "{{C7E48B92-68D5-4C31-9177-503BA7F62DB8}"
-#define DisplayName "Tanren Collector Engineering"
-#define GroupName "Tanren Engineering"
+#define DisplayName "tanrenway Bridge Engineering"
+#define InstallFolder "Tanren Collector Engineering"
+#define GroupName "tanrenway Engineering"
 #define StartupValue "TanrenCollectorEngineering"
 #define MutexName "Local\TanrenCollector.Engineering.Desktop"
 #define SetupName "TanrenCollectorEngineeringSetup"
 #else
 #define AppIdentity "{{A40F8247-D97C-4BB5-A778-452509E35053}"
-#define DisplayName "Tanren Collector"
-#define GroupName "Tanren"
+#define DisplayName "tanrenway Bridge"
+; The install folder keeps its first name, so updates land on top of existing installations.
+#define InstallFolder "Tanren Collector"
+#define GroupName "tanrenway"
 #define StartupValue "TanrenCollector"
 #define MutexName "Local\TanrenCollector.Desktop"
 #define SetupName "TanrenCollectorSetup"
@@ -24,9 +27,9 @@
 AppId={#AppIdentity}
 AppName={#DisplayName}
 AppVersion={#Version}
-VersionInfoVersion=0.7.1.0
+VersionInfoVersion=0.8.0.0
 AppVerName={#DisplayName} {#Version}
-DefaultDirName={localappdata}\Programs\{#DisplayName}
+DefaultDirName={localappdata}\Programs\{#InstallFolder}
 DefaultGroupName={#GroupName}
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -60,8 +63,8 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 [CustomMessages]
 english.DesktopIcon=Create a desktop shortcut
 ukrainian.DesktopIcon=Створити ярлик на робочому столі
-english.Startup=Start Collector when I sign in to Windows
-ukrainian.Startup=Запускати Collector при вході у Windows
+english.Startup=Start tanrenway Bridge when I sign in to Windows
+ukrainian.Startup=Запускати tanrenway Bridge при вході у Windows
 english.OpenCollector=Open {#DisplayName}
 ukrainian.OpenCollector=Відкрити {#DisplayName}
 [Tasks]
@@ -73,6 +76,13 @@ Name: startup; Description: "{cm:Startup}"; Flags: checkedonce
 #endif
 [Files]
 Source: "{#DistributionRoot}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+[InstallDelete]
+; Shortcuts from before the rename to tanrenway Bridge, so an update leaves no duplicates.
+Type: files; Name: "{autoprograms}\Tanren Collector.lnk"
+Type: files; Name: "{autodesktop}\Tanren Collector.lnk"
+Type: files; Name: "{autoprograms}\Tanren Collector Engineering.lnk"
+Type: files; Name: "{autodesktop}\Tanren Collector Engineering.lnk"
+
 [Icons]
 Name: "{autoprograms}\{#DisplayName}"; Filename: "{app}\TanrenCollector.exe"
 Name: "{autodesktop}\{#DisplayName}"; Filename: "{app}\TanrenCollector.exe"; Tasks: desktopicon

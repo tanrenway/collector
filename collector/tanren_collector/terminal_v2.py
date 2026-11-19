@@ -1,22 +1,146 @@
 """MT5 v2 read allowlist. Sequential per-process IPC, no login/trade/modify calls."""
 
+import math
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Context, Decimal, InvalidOperation
 
 from .observability import stage
 from .terminal import Terminal, initialize_readonly, money, timestamp
 
+# Storage contract of every MT5 number on the backend: Numeric(38,12) / Money (12 decimal places,
+# integer part below 10**26). Three kinds of source numbers meet it differently:
+#
+# * Trade facts (deal, order and position source values: volume, price, deal P/L components,
+#   SL/TP, ...) - numeric(): the double's shortest decimal, exactly. A double carries 15 significant
+#   decimal digits (DBL_DIG); digits beyond that are binary noise of a value the server computed in
+#   floating point (a commission of 7 x 0.03 arrives as 0.21000000000000002). This artefact is
+#   the server's short value (0.21) and is kept as that (production 2026-11-18: two connections
+#   stopped on one artefact). A fact that still does not fit fails the read
+#   (SOURCE_PRECISION_UNSUPPORTED, with the field named for the log, never the value); it is never
+#   rounded or dropped.
+# * Live computed values (account equity, floating profit, margin, free margin; open-position
+#   profit, swap, current price and opening price - on a netting account the volume-weighted average
+#   of its deals; tick value) - measured(): the terminal recomputes them on every
+#   tick in binary floating point, so float artefacts such as 0.30000000000000004 or a tick value of
+#   0.6779661016949152 are normal. An artefact (the 15-significant-digit decimal, DBL_DIG, lies
+#   within ARTEFACT_ULPS units in the last place of the double) is removed; otherwise the exact
+#   value is rounded half-even to 12 decimal places (error at most 5e-13). A value that cannot be
+#   kept without distortion (out of range, or so small that rounding would make it 0 or move it by
+#   more than a billionth of itself) becomes null: unknown, never 0.
+# * Reference values (account balance; symbol point, tick size and contract size) - reference():
+#   short decimals configured on the server. Kept exactly; a float artefact is removed as above;
+#   anything that would need rounding becomes null (unknown) instead of a guessed value.
+#
+# A null never fails the sync; each one is recorded in `issues` (field and reason, no values) so the
+# caller can log it.
+LIMIT = Decimal(10) ** 26
+QUANTUM = Decimal(1).scaleb(-12)
+DOUBLE_DIGITS = Context(prec=15, rounding=ROUND_HALF_EVEN)
+ARTEFACT_ULPS = 4
+MAX_RELATIVE_ROUNDING = Decimal("1e-9")
 
-def numeric(value):
-    text = money(value)
-    if text is not None:
-        decimal = Decimal(text)
-        if abs(decimal) >= Decimal(10) ** 26 or decimal.as_tuple().exponent < -12:
-            raise RuntimeError("SOURCE_PRECISION_UNSUPPORTED")
-    return text
+
+def fits(decimal):
+    return abs(decimal) < LIMIT and decimal.as_tuple().exponent >= -12
 
 
-def observation(kind, row):
+def text(decimal):
+    # Plain notation without trailing zeros ("0.3", "100"), never an exponent.
+    value = decimal.normalize()
+    return format(value if value != 0 else Decimal(0), "f")
+
+
+class SourcePrecisionError(RuntimeError):
+    """A trade fact that does not fit the storage contract; `field` names it (never the value)."""
+
+    def __init__(self, field=None):
+        super().__init__("SOURCE_PRECISION_UNSUPPORTED")
+        self.field = field
+
+
+def numeric(value, field=None, issues=None):
+    """Trade fact: exact (a float artefact is the server's short value), or the read fails."""
+    text_value = money(value)
+    if text_value is None:
+        return None
+    decimal = Decimal(text_value)
+    if fits(decimal):
+        return text_value
+    short = artefact_free(decimal) if abs(decimal) < LIMIT else None
+    if short is None:
+        raise SourcePrecisionError(field)
+    if issues is not None:
+        issues.append((field or "fact", "FLOAT_ARTEFACT_REMOVED"))
+    return text(short)
+
+
+def _source(value, field, issues):
+    """The exact decimal of a source number, or None (recorded) when it is not a finite number."""
+    if value is None:
+        return None, None
+    try:
+        exact = money(value)
+        return exact, Decimal(exact)
+    except (RuntimeError, InvalidOperation, ValueError, TypeError):
+        issues.append((field, "INVALID_SOURCE_NUMBER"))
+        return None, None
+
+
+def artefact_free(decimal):
+    """The short decimal behind a float artefact, or None when the digits are real."""
+    short = DOUBLE_DIGITS.plus(decimal).normalize()
+    if not fits(short):
+        return None
+    ulp = Decimal(math.ulp(float(decimal)))
+    return short if abs(short - decimal) <= ARTEFACT_ULPS * ulp else None
+
+
+def measured(value, field, issues):
+    """Live computed value: float artefacts normalized to the storage contract, else unknown."""
+    exact, decimal = _source(value, field, issues)
+    if decimal is None or fits(decimal):
+        return exact
+    if abs(decimal) >= LIMIT:
+        issues.append((field, "SOURCE_OUT_OF_RANGE"))
+        return None
+    short = artefact_free(decimal)
+    if short is not None:
+        issues.append((field, "FLOAT_ARTEFACT_REMOVED"))
+        return text(short)
+    rounded = decimal.quantize(QUANTUM, rounding=ROUND_HALF_EVEN)
+    if rounded == 0 or abs(rounded - decimal) / abs(decimal) > MAX_RELATIVE_ROUNDING:
+        # Below the contract's resolution: rounding would turn the value into 0 or distort it.
+        issues.append((field, "SOURCE_BELOW_RESOLUTION"))
+        return None
+    issues.append((field, "ROUNDED_TO_CONTRACT"))
+    return text(rounded)
+
+
+def reference(value, field, issues):
+    """Server-configured value: exact (up to a double's own precision), else unknown."""
+    exact, decimal = _source(value, field, issues)
+    if decimal is None or fits(decimal):
+        return exact
+    if abs(decimal) >= LIMIT:
+        issues.append((field, "SOURCE_OUT_OF_RANGE"))
+        return None
+    short = artefact_free(decimal)
+    if short is not None:
+        issues.append((field, "FLOAT_ARTEFACT_REMOVED"))
+        return text(short)
+    issues.append((field, "SOURCE_PRECISION_UNSUPPORTED"))
+    return None
+
+
+# Per record kind: which observation fields are live values (everything else is a trade fact).
+# An open position's price_open is the terminal's average on a netting account (deals stay facts).
+LIVE_FIELDS = {
+    "position": ("profit", "swap", "price_current", "price_open"),
+    "order": ("price_current",),
+}
+
+
+def observation(kind, row, issues=None):
     actual_type = row.type
     side = (
         "long" if actual_type in (0, 2, 4, 6) else "short" if actual_type in (1, 3, 5, 7) else None
@@ -71,7 +195,12 @@ def observation(kind, row):
         "price_open",
         "price_current",
     ):
-        result[field] = numeric(getattr(row, field, None))
+        source = getattr(row, field, None)
+        found = issues if issues is not None else []
+        if field in LIVE_FIELDS.get(kind, ()):
+            result[field] = measured(source, f"{kind}.{field}", found)
+        else:
+            result[field] = numeric(source, f"{kind}.{field}", found)
     if kind == "order":
         result["volume"] = result["volume_initial"]
         result["price"] = result["price_open"]
@@ -232,6 +361,8 @@ class RawTerminal(Terminal):
 
     def read(self, start, end):
         self.verify()
+        # Normalized or unknown live/reference values of this read: (field, reason), no values.
+        self.issues = issues = []
         result = []
         for kind, name, args in (
             ("deal", "history_deals_get", (start, end)),
@@ -239,7 +370,7 @@ class RawTerminal(Terminal):
             ("order", "orders_get", ()),
             ("position", "positions_get", ()),
         ):
-            result.extend(observation(kind, row) for row in self.rows(name, *args))
+            result.extend(observation(kind, row, issues) for row in self.rows(name, *args))
         info = self.api.account_info()
         if self.info_identity(info) != self.expected:
             raise RuntimeError("TERMINAL_IDENTITY_MISMATCH")
@@ -250,10 +381,10 @@ class RawTerminal(Terminal):
                 "time": observed,
                 "time_source": "collector_utc",
                 "currency": info.currency,
+                "balance": reference(getattr(info, "balance", None), "account.balance", issues),
                 **{
-                    field: numeric(getattr(info, attr, None))
+                    field: measured(getattr(info, attr, None), "account." + field, issues)
                     for field, attr in (
-                        ("balance", "balance"),
                         ("equity", "equity"),
                         ("profit", "profit"),
                         ("margin", "margin"),
@@ -275,16 +406,30 @@ class RawTerminal(Terminal):
                     "profit_currency": spec.currency_profit,
                     "margin_currency": spec.currency_margin,
                     "calculation_mode": spec.trade_calc_mode,
-                    **{
-                        field: numeric(getattr(spec, attr, None))
-                        for field, attr in (
-                            ("point", "point"),
-                            ("tick_size", "trade_tick_size"),
-                            ("tick_value", "trade_tick_value"),
-                            ("contract_size", "trade_contract_size"),
-                        )
-                    },
+                    "point": reference(getattr(spec, "point", None), "symbol.point", issues),
+                    "tick_size": reference(
+                        getattr(spec, "trade_tick_size", None), "symbol.tick_size", issues
+                    ),
+                    # Recomputed from current exchange rates on every tick: a live value.
+                    "tick_value": measured(
+                        getattr(spec, "trade_tick_value", None), "symbol.tick_value", issues
+                    ),
+                    "contract_size": reference(
+                        getattr(spec, "trade_contract_size", None), "symbol.contract_size", issues
+                    ),
                 }
             )
         self.verify()
+        # Across all reads of this terminal object (a sync job may read several windows).
+        counts = getattr(self, "issue_counts", None)
+        if counts is None:
+            counts = self.issue_counts = {}
+        for field, reason in issues:
+            key = f"{field}:{reason}"
+            counts[key] = counts.get(key, 0) + 1
+        kinds = getattr(self, "record_counts", None)
+        if kinds is None:
+            kinds = self.record_counts = {}
+        for record in result:
+            kinds[record["kind"]] = kinds.get(record["kind"], 0) + 1
         return result

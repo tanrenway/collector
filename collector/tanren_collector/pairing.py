@@ -36,7 +36,7 @@ def advance(store, api_factory=V2Api):
                 "claim_digest": digest(pending["claim"]),
                 "device_digest": digest(pending["device"]),
                 "identity": pending["identity"],
-                "label": "Tanren Collector",
+                "label": "tanrenway Bridge",
             },
         )
         pending["claimed"] = True

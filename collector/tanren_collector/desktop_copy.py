@@ -15,16 +15,16 @@ COPY = {
         ("Діапазон оброблено сервером"),
     ),
     "open": (
-        ("Open Tanren Collector"),
-        ("Відкрити Tanren Collector"),
+        ("Open tanrenway Bridge"),
+        ("Відкрити tanrenway Bridge"),
     ),
     "title": (
         ("Your trading. Always connected."),
         ("Ваша торгівля. Завжди на зв’язку."),
     ),
     "subtitle": (
-        ("Automatic, read-only synchronization with Tanren."),
-        ("Автоматична синхронізація з Tanren лише для читання."),
+        ("Automatic, read-only synchronization with tanrenway."),
+        ("Автоматична синхронізація з tanrenway лише для читання."),
     ),
     "add": (
         ("Add account"),
@@ -43,8 +43,8 @@ COPY = {
         ("Експортувати діагностику"),
     ),
     "quit": (
-        ("Quit Collector"),
-        ("Завершити Collector"),
+        ("Quit Bridge"),
+        ("Завершити Bridge"),
     ),
     "accounts": (
         ("Accounts"),
@@ -87,8 +87,8 @@ COPY = {
         ("Поновити авторизацію"),
     ),
     "site": (
-        ("Open account on Tanren"),
-        ("Відкрити рахунок у Tanren"),
+        ("Open account on tanrenway"),
+        ("Відкрити рахунок у tanrenway"),
     ),
     "connected": (
         ("Connecting · waiting for a confirmed result"),
@@ -178,13 +178,13 @@ COPY = {
     ),
     "instruction": (
         (
-            "In Tanren open/create an MT5 account, then choose Connect Windows "
-            "Collector. Paste its one-time token here. Select a discovered "
+            "In tanrenway open/create an MT5 account, then choose Connect Windows "
+            "Bridge. Paste its one-time token here. Select a discovered "
             "terminal and read its active account. Never enter an MT5 password."
         ),
         (
-            "У Tanren відкрийте або створіть MT5-рахунок і виберіть «Підключити"
-            " Windows Collector». Вставте одноразовий токен. Виберіть виявлений "
+            "У tanrenway відкрийте або створіть MT5-рахунок і виберіть «Підключити"
+            " Windows Bridge». Вставте одноразовий токен. Виберіть виявлений "
             "термінал і прочитайте активний рахунок. Не вводьте пароль MT5."
         ),
     ),
@@ -227,11 +227,11 @@ COPY = {
     "empty_body": (
         (
             "Keep MT5 signed in. We find the terminal; you confirm the account on"
-            " Tanren. No trading password is collected."
+            " tanrenway. No trading password is collected."
         ),
         (
             "Залиште MT5 авторизованим. Ми знайдемо термінал, а ви підтвердите "
-            "рахунок у Tanren. Торговий пароль не збирається."
+            "рахунок у tanrenway. Торговий пароль не збирається."
         ),
     ),
     "paused": (
@@ -266,21 +266,21 @@ COPY = {
     ),
     "full_body": (
         (
-            "Request a history scan on Tanren. The Collector will scan the "
+            "Request a history scan on tanrenway. The Bridge will scan the "
             "requested range and wait for the server to process every delivered "
             "batch. Receiving data alone is not completion. Pending data is never"
             " erased."
         ),
         (
-            "Замовте сканування історії у Tanren. Collector перевірить "
+            "Замовте сканування історії у tanrenway. Bridge перевірить "
             "запитаний діапазон і дочекається обробки всіх доставлених пакетів "
             "сервером. Приймання даних не означає завершення. Очікувані дані не "
             "видаляються."
         ),
     ),
     "manage": (
-        ("Manage on Tanren"),
-        ("Керувати у Tanren"),
+        ("Manage on tanrenway"),
+        ("Керувати у tanrenway"),
     ),
     "lifecycle": (
         (
@@ -412,12 +412,12 @@ COPY = {
     ),
     "token_help": (
         (
-            "On Tanren choose your MT5 account → Connect Windows Collector → "
+            "On tanrenway choose your MT5 account → Connect Windows Bridge → "
             "create a one-time token. Paste it below. Never paste a trading "
             "password."
         ),
         (
-            "У Tanren виберіть MT5-рахунок → підключення Windows Collector → "
+            "У tanrenway виберіть MT5-рахунок → підключення Windows Bridge → "
             "створіть одноразовий токен. Вставте його нижче. Не вставляйте "
             "торговий пароль."
         ),
@@ -454,11 +454,11 @@ COPY = {
     ),
     "quit_body": (
         (
-            "Quit Collector? Pending records stay in the protected queue. "
+            "Quit Bridge? Pending records stay in the protected queue. "
             "Synchronization resumes when you reopen it."
         ),
         (
-            "Завершити Collector? Очікувані записи залишаться в захищеній черзі. "
+            "Завершити Bridge? Очікувані записи залишаться в захищеній черзі. "
             "Синхронізація продовжиться після наступного запуску."
         ),
     ),
@@ -493,11 +493,8 @@ COPY = {
         ),
     ),
     "auth_hint": (
-        ("Sign in inside MT5, then read the account again. Collector never asks for its password."),
-        (
-            "Авторизуйтеся в самому MT5 і прочитайте рахунок знову. Collector не "
-            "запитує його пароль."
-        ),
+        ("Sign in inside MT5, then read the account again. Bridge never asks for its password."),
+        ("Авторизуйтеся в самому MT5 і прочитайте рахунок знову. Bridge не запитує його пароль."),
     ),
     "net_hint": (
         ("Check your internet connection. Pending batches retry automatically with the same IDs."),
@@ -518,22 +515,22 @@ COPY = {
     ),
     "reauth_hint": (
         (
-            "Create a fresh enrollment on Tanren and reconnect this binding. "
+            "Create a fresh enrollment on tanrenway and reconnect this binding. "
             "Old queued data is not deleted."
         ),
         (
-            "Створіть нове підключення у Tanren і повторно авторизуйте його. "
+            "Створіть нове підключення у tanrenway і повторно авторизуйте його. "
             "Старі дані в черзі не видаляються."
         ),
     ),
     "disk_hint": (
         (
             "Free space using your normal Windows tools or contact support. Do "
-            "not delete Collector databases or pending batches."
+            "not delete Bridge databases or pending batches."
         ),
         (
             "Звільніть місце звичайними засобами Windows або зверніться до "
-            "підтримки. Не видаляйте бази Collector чи очікувані пакети."
+            "підтримки. Не видаляйте бази Bridge чи очікувані пакети."
         ),
     ),
     "tls_hint": (
