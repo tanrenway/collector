@@ -22,17 +22,17 @@ PAIRS = {
         "Локальний шлях недоступний",
     ),
     "pairBeforeRegister": (
-        "Connect this computer to Tanren first.",
-        "Спершу підключіть цей комп’ютер до Tanren.",
+        "Connect this computer to tanrenway first.",
+        "Спершу підключіть цей комп’ютер до tanrenway.",
     ),
     "registrationHint": (
         "Check the account details before adding it.",
         "Перевірте дані рахунку перед додаванням.",
     ),
     "shutdownHelp": (
-        "Shutdown is delayed. Keep Collector open while active operations finish;"
+        "Shutdown is delayed. Keep Bridge open while active operations finish;"
         " do not reset local data.",
-        "Завершення затримується. Залиште Collector відкритим до завершення "
+        "Завершення затримується. Залиште Bridge відкритим до завершення "
         "операцій; не скидайте локальні дані.",
     ),
     "activity": (
@@ -60,8 +60,8 @@ PAIRS = {
         "Відкрити допомогу",
     ),
     "activityHint": (
-        "What has happened since Collector was opened.",
-        "Що відбувалося відтоді, як ви відкрили Collector.",
+        "What has happened since Bridge was opened.",
+        "Що відбувалося відтоді, як ви відкрили Bridge.",
     ),
     "noActivity": (
         "Nothing to show yet",
@@ -80,49 +80,49 @@ PAIRS = {
         "Перевірити підключення знову",
     ),
     "readyHint": (
-        "Your MetaTrader 5 trades go to your Tanren journal automatically.",
-        "Угоди з MetaTrader 5 автоматично потрапляють у ваш журнал Tanren.",
+        "Your MetaTrader 5 trades go to your tanrenway journal automatically.",
+        "Угоди з MetaTrader 5 автоматично потрапляють у ваш журнал tanrenway.",
     ),
     "terminalHelp": (
-        "Open MetaTrader 5 and sign in to this account. Collector never changes your login.",
-        "Відкрийте MetaTrader 5 і увійдіть у цей рахунок. Collector не змінює ваш вхід.",
+        "Open MetaTrader 5 and sign in to this account. Bridge never changes your login.",
+        "Відкрийте MetaTrader 5 і увійдіть у цей рахунок. Bridge не змінює ваш вхід.",
     ),
     "networkHelp": (
-        "No connection to Tanren. Collector will retry on its own, and your data is safe.",
-        "Немає зв’язку з Tanren. Collector спробує ще раз сам, ваші дані в безпеці.",
+        "No connection to tanrenway. Bridge will retry on its own, and your data is safe.",
+        "Немає зв’язку з tanrenway. Bridge спробує ще раз сам, ваші дані в безпеці.",
     ),
     "authHelp": (
         (
-            "This computer no longer has access to your Tanren account: it was unlinked or its "
+            "This computer no longer has access to your tanrenway account: it was unlinked or its "
             "access was revoked on the website, or the sign-in expired. Your journal is safe. "
-            "Create a new code on the Collector page of the Tanren site and pair again."
+            "Create a new code on the Bridge page of the tanrenway site and pair again."
         ),
         (
-            "Цей комп’ютер більше не має доступу до вашого акаунта Tanren: його відв’язали чи "
+            "Цей комп’ютер більше не має доступу до вашого акаунта tanrenway: його відв’язали чи "
             "відкликали доступ на сайті, або вхід застарів. Ваш журнал у безпеці. Створіть "
-            "новий код на сторінці Collector на сайті Tanren і підключіть комп’ютер знову."
+            "новий код на сторінці Bridge на сайті tanrenway і підключіть комп’ютер знову."
         ),
     ),
     "conflictHelp": (
         (
-            "This MetaTrader 5 account is already linked to another Tanren account or "
-            "computer. Nothing was changed. Check that you are signed in to the right Tanren "
+            "This MetaTrader 5 account is already linked to another tanrenway account or "
+            "computer. Nothing was changed. Check that you are signed in to the right tanrenway "
             "account, or unlink the account there first."
         ),
         (
-            "Цей рахунок MetaTrader 5 уже прив’язано до іншого акаунта Tanren або комп’ютера. "
-            "Нічого не змінено. Перевірте, що ви в правильному акаунті Tanren, або спершу "
+            "Цей рахунок MetaTrader 5 уже прив’язано до іншого акаунта tanrenway або комп’ютера. "
+            "Нічого не змінено. Перевірте, що ви в правильному акаунті tanrenway, або спершу "
             "відв’яжіть рахунок там."
         ),
     ),
     "scopeHelp": (
         (
             "This computer is not allowed to send this account. Check which accounts it may "
-            "sync on the Collector page of the Tanren site."
+            "sync on the Bridge page of the tanrenway site."
         ),
         (
             "Цьому комп’ютеру не дозволено надсилати цей рахунок. Перевірте, які рахунки він "
-            "може синхронізувати, на сторінці Collector на сайті Tanren."
+            "може синхронізувати, на сторінці Bridge на сайті tanrenway."
         ),
     ),
     "statusDevicePaused": (
@@ -138,8 +138,8 @@ PAIRS = {
         "Підключити знову",
     ),
     "quitAction": (
-        "Quit Collector",
-        "Закрити Collector",
+        "Quit Bridge",
+        "Закрити Bridge",
     ),
     "paletteSystem": (
         "Match Windows (light or dark)",
@@ -188,8 +188,8 @@ PAIRS = {
         "Цей комп’ютер підключено заново. Зверніться до підтримки, щоб нічого не втратити.",
     ),
     "reviewAccess": (
-        "Manage access in Tanren",
-        "Керувати доступом у Tanren",
+        "Manage access in tanrenway",
+        "Керувати доступом у tanrenway",
     ),
     "loading": (
         "Working…",
@@ -204,8 +204,8 @@ PAIRS = {
         "Наступна спроба за (секунд)",
     ),
     "expiresHint": (
-        "Code expired? Create a new one on the Tanren site.",
-        "Код уже не діє? Створіть новий на сайті Tanren.",
+        "Code expired? Create a new one on the tanrenway site.",
+        "Код уже не діє? Створіть новий на сайті tanrenway.",
     ),
     "scheduled": (
         "Scheduled; waiting for updated status",
@@ -252,12 +252,12 @@ PAIRS = {
         "Один захищений пристрій. Усі торгові рахунки.",
     ),
     "pairTitle": (
-        "Connect your Collector",
-        "Підключіть Collector",
+        "Connect your Bridge",
+        "Підключіть Bridge",
     ),
     "pairHint": (
-        "Create a code in Tanren Web, then compare the verification phrase in your browser.",
-        "Створіть код у Tanren Web, а потім звірте фразу підтвердження у браузері.",
+        "Create a code in tanrenway Web, then compare the verification phrase in your browser.",
+        "Створіть код у tanrenway Web, а потім звірте фразу підтвердження у браузері.",
     ),
     "deviceName": (
         "Device name",
@@ -272,8 +272,8 @@ PAIRS = {
         "Підключити пристрій",
     ),
     "browser": (
-        "Open Tanren",
-        "Відкрити Tanren",
+        "Open tanrenway",
+        "Відкрити tanrenway",
     ),
     "phrase": (
         "Verification phrase",
@@ -288,18 +288,18 @@ PAIRS = {
         "Відключити цей комп’ютер",
     ),
     "repairWarning": (
-        "Use this only if Collector stopped working. Your data stays on this "
+        "Use this only if Bridge stopped working. Your data stays on this "
         "computer, and support may need to help finish the reconnection.",
-        "Робіть це, лише якщо Collector перестав працювати. Дані залишаться на "
+        "Робіть це, лише якщо Bridge перестав працювати. Дані залишаться на "
         "цьому комп’ютері, а завершити підключення може допомогти підтримка.",
     ),
     "disconnectWarning": (
-        "Collector will stop syncing accounts from this computer. Your journal "
-        "stays as it is. To remove access completely, use Collector on the Tanren"
+        "Bridge will stop syncing accounts from this computer. Your journal "
+        "stays as it is. To remove access completely, use Bridge on the tanrenway"
         " site.",
-        "Collector перестане синхронізувати рахунки з цього комп’ютера. Журнал "
+        "Bridge перестане синхронізувати рахунки з цього комп’ютера. Журнал "
         "залишиться без змін. Щоб повністю закрити доступ, скористайтеся розділом"
-        " Collector на сайті Tanren.",
+        " Bridge на сайті tanrenway.",
     ),
     "registered": (
         "Accounts",
@@ -368,8 +368,8 @@ PAIRS = {
         "Не підключено",
     ),
     "claiming": (
-        "Contacting Tanren",
-        "З’єднання з Tanren",
+        "Contacting tanrenway",
+        "З’єднання з tanrenway",
     ),
     "awaiting_browser_confirmation": (
         "Waiting for browser confirmation",
@@ -416,8 +416,8 @@ PAIRS = {
         "Потребує уваги",
     ),
     "needs_review": (
-        "Some trades need checking on the Tanren site.",
-        "Деякі угоди потрібно перевірити на сайті Tanren.",
+        "Some trades need checking on the tanrenway site.",
+        "Деякі угоди потрібно перевірити на сайті tanrenway.",
     ),
     "partial": (
         "Partly updated",
@@ -448,8 +448,8 @@ PAIRS = {
         "Оновлення всієї історії",
     ),
     "forceHint": (
-        "Requested on the Tanren site. Collector is re-reading this account’s history.",
-        "Запитано на сайті Tanren. Collector заново читає історію цього рахунку.",
+        "Requested on the tanrenway site. Bridge is re-reading this account’s history.",
+        "Запитано на сайті tanrenway. Bridge заново читає історію цього рахунку.",
     ),
     "pause": (
         "Pause",
@@ -476,10 +476,10 @@ PAIRS = {
         "Прочитати рахунок",
     ),
     "identityHint": (
-        "Open MetaTrader 5, sign in to the account, then find it here. Collector "
+        "Open MetaTrader 5, sign in to the account, then find it here. Bridge "
         "only reads your history and never places trades.",
         "Відкрийте MetaTrader 5, увійдіть у потрібний рахунок і знайдіть його "
-        "тут. Collector лише читає історію й ніколи не торгує.",
+        "тут. Bridge лише читає історію й ніколи не торгує.",
     ),
     "name": (
         "Account name",
@@ -494,15 +494,15 @@ PAIRS = {
         "Сховати параметри",
     ),
     "registrationDenied": (
-        "This computer is not allowed to add accounts. In Tanren Web open "
-        "Collector, choose this computer and select Allow account registration.",
+        "This computer is not allowed to add accounts. In tanrenway Web open "
+        "Bridge, choose this computer and select Allow account registration.",
         "Цьому комп’ютеру не дозволено додавати рахунки. На сайті відкрийте "
-        "Collector, виберіть цей комп’ютер і натисніть «Дозволити реєстрацію "
+        "Bridge, виберіть цей комп’ютер і натисніть «Дозволити реєстрацію "
         "рахунків».",
     ),
     "busyHelp": (
-        "Collector is finishing another action. Try again in a few seconds.",
-        "Collector завершує іншу дію. Спробуйте ще раз за кілька секунд.",
+        "Bridge is finishing another action. Try again in a few seconds.",
+        "Bridge завершує іншу дію. Спробуйте ще раз за кілька секунд.",
     ),
     "pickTerminal": (
         "Choose terminal manually",
@@ -521,9 +521,9 @@ PAIRS = {
         "Пропфірма або брокер",
     ),
     "howAdd": (
-        "You don’t need to create anything on the site: Collector adds the "
+        "You don’t need to create anything on the site: Bridge adds the "
         "account for you. Choose any name you like.",
-        "На сайті нічого створювати не потрібно: Collector додасть рахунок сам. "
+        "На сайті нічого створювати не потрібно: Bridge додасть рахунок сам. "
         "Назву можна вказати будь-яку.",
     ),
     "chartsHint": (
@@ -686,8 +686,8 @@ PAIRS = {
         "Завантажуємо оновлення…",
     ),
     "update_ready": (
-        "Ready to install. Collector will close while the installer runs.",
-        "Готово до встановлення. Collector закриється на час установки.",
+        "Ready to install. Bridge will close while the installer runs.",
+        "Готово до встановлення. Bridge закриється на час установки.",
     ),
     "update_error": (
         "The update could not be completed. Try again later.",
@@ -726,8 +726,8 @@ PAIRS = {
         "Вибрано",
     ),
     "deviceHint": (
-        "This computer sends your MetaTrader 5 trades to Tanren.",
-        "Цей комп’ютер надсилає ваші угоди з MetaTrader 5 у Tanren.",
+        "This computer sends your MetaTrader 5 trades to tanrenway.",
+        "Цей комп’ютер надсилає ваші угоди з MetaTrader 5 у tanrenway.",
     ),
     "language": (
         "Language",
@@ -750,8 +750,8 @@ PAIRS = {
         "Сповіщення на робочому столі",
     ),
     "installedOnly": (
-        "Available in the installed version of Collector.",
-        "Доступно у встановленій версії Collector.",
+        "Available in the installed version of Bridge.",
+        "Доступно у встановленій версії Bridge.",
     ),
     "export": (
         "Save report for support",
@@ -771,8 +771,8 @@ PAIRS = {
         "Ідентифікатор звернення",
     ),
     "help": (
-        "Please don’t delete Collector’s data to fix a problem. Your trades could be delayed.",
-        "Не видаляйте дані Collector, щоб виправити проблему: синхронізація угод може затриматися.",
+        "Please don’t delete Bridge’s data to fix a problem. Your trades could be delayed.",
+        "Не видаляйте дані Bridge, щоб виправити проблему: синхронізація угод може затриматися.",
     ),
     "submitted": (
         "Request sent; waiting for confirmation",
@@ -803,12 +803,12 @@ PAIRS = {
         "Скасувати",
     ),
     "quit": (
-        "Quit Collector",
-        "Завершити Collector",
+        "Quit Bridge",
+        "Завершити Bridge",
     ),
     "quitHint": (
-        "New trades won’t sync until you open Collector again. Your data is safe.",
-        "Нові угоди не синхронізуватимуться, доки ви знову не відкриєте Collector. Дані в безпеці.",
+        "New trades won’t sync until you open Bridge again. Your data is safe.",
+        "Нові угоди не синхронізуватимуться, доки ви знову не відкриєте Bridge. Дані в безпеці.",
     ),
     "suspended": (
         "Windows suspended — synchronization paused",
@@ -903,8 +903,8 @@ PAIRS = {
         "Цей комп’ютер не підключено",
     ),
     "overviewNoDeviceHint": (
-        "Connect it to Tanren to start syncing your trades.",
-        "Підключіть його до Tanren, щоб почати синхронізацію угод.",
+        "Connect it to tanrenway to start syncing your trades.",
+        "Підключіть його до tanrenway, щоб почати синхронізацію угод.",
     ),
     "overviewEmpty": (
         "Add your first account",
@@ -927,8 +927,8 @@ PAIRS = {
         "Перевірте підключення до інтернету.",
     ),
     "helpStepAccess": (
-        "On the Tanren site, check that this computer still has access.",
-        "На сайті Tanren перевірте, чи цей комп’ютер досі має доступ.",
+        "On the tanrenway site, check that this computer still has access.",
+        "На сайті tanrenway перевірте, чи цей комп’ютер досі має доступ.",
     ),
     "exportTitle": (
         "Need more help?",
@@ -939,8 +939,8 @@ PAIRS = {
         "Дані для підтримки",
     ),
     "activity_device_paired": (
-        "This computer connected to Tanren",
-        "Комп’ютер підключено до Tanren",
+        "This computer connected to tanrenway",
+        "Комп’ютер підключено до tanrenway",
     ),
     "activity_device_awaiting_browser_confirmation": (
         "Waiting for your confirmation in the browser",

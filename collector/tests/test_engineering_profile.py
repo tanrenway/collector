@@ -20,7 +20,7 @@ from tanren_collector.storage import DPAPI, ENGINEERING_SEAL, Queue, load_config
 from tanren_collector.windows import FileLock, terminal_lock
 
 REPO = Path(__file__).resolve().parents[2]
-BASELINE_SHA256 = "f2b93525d62561727d46c5fda7a6a1a72add4fbd87a9bd55d96c211230aca864"
+BASELINE_SHA256 = "265e218b27f212d38d2fd143443d895f515a648d5a19d294d2f1b27883a75bd3"
 
 
 def installer(engineering, source=None):
@@ -349,7 +349,13 @@ class ProfileTests(unittest.TestCase):
         prod, eng = installer(False), installer(True)
         for identity, text in ((profile.PRODUCTION, prod), (profile.ENGINEERING, eng)):
             self.assertIn("AppId={{" + identity.app_id + "}", text)
-            self.assertIn("DefaultDirName={localappdata}\\Programs\\" + identity.display_name, text)
+            # The install folder keeps its first name so updates land on existing installations.
+            folder = (
+                "Tanren Collector Engineering"
+                if identity is profile.ENGINEERING
+                else "Tanren Collector"
+            )
+            self.assertIn("DefaultDirName={localappdata}\\Programs\\" + folder, text)
             self.assertIn("AppMutex=" + identity.mutex, text)
             self.assertIn('ValueName: "' + identity.autostart_value + '"', text)
             self.assertIn('Name: "{autoprograms}\\' + identity.display_name + '"', text)
@@ -374,12 +380,13 @@ class ProfileTests(unittest.TestCase):
         self.assertIn("TanrenCollectorEngineeringSetup.exe", text)
 
     def test_production_installer_configuration_matches_baseline(self):
-        # Immutable baseline from 4667d84; works with GitHub's shallow checkout.
-        raw = (REPO / "collector/tests/fixtures/installer-baseline-4667d84.iss").read_bytes()
+        # Immutable baseline: the 4667d84 configuration with only the product renamed (to
+        # Tanren, then to tanrenway Bridge: display name, Start-menu group, old shortcuts removed
+        # on update); install folder, AppId, mutex, autostart value and executable unchanged.
+        raw = (REPO / "collector/tests/fixtures/installer-baseline-bridge.iss").read_bytes()
         raw = raw.replace(b"\r\n", b"\n")
         self.assertEqual(hashlib.sha256(raw).hexdigest(), BASELINE_SHA256)
         # The baseline guards the installer's configuration; the release number is meant to change.
-        # The fixture is the 4667d84 configuration with only the product name renamed to Tanren.
         baseline = raw.decode("utf-8").replace("0.6.0", __version__)
 
         def normalize(text):

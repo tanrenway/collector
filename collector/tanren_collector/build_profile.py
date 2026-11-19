@@ -21,7 +21,7 @@ class Identity:
 
 PRODUCTION = Identity(
     "production",
-    "Tanren Collector",
+    "tanrenway Bridge",
     "TanrenCollector",
     "TanrenCollector",
     r"Local\TanrenCollector.Desktop",
@@ -29,7 +29,7 @@ PRODUCTION = Identity(
 )
 ENGINEERING = Identity(
     "engineering",
-    "Tanren Collector Engineering",
+    "tanrenway Bridge Engineering",
     "TanrenCollectorEngineering",
     "TanrenCollectorEngineering",
     r"Local\TanrenCollector.Engineering.Desktop",

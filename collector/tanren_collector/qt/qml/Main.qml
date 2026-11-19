@@ -120,7 +120,13 @@ ApplicationWindow {
                 RowLayout {
                     Layout.topMargin: 14; Layout.bottomMargin: 26; spacing: 10
                     Image { source: ui.mark(ui.colors.muted,ui.colors.accent,ui.colors.sessionLondon); sourceSize.width: 72; sourceSize.height: 42; Layout.preferredWidth: 36; Layout.preferredHeight: 21; Accessible.ignored: true }
-                    C.Copy { visible: !root.compact; text: "Tanren"; size: 19; font.weight: Font.DemiBold }
+                    // The product logo as on the site: "Tanren" with a small raised amber "way".
+                    Row {
+                        visible: !root.compact; spacing: 2
+                        Accessible.role: Accessible.StaticText; Accessible.name: "tanrenway"
+                        C.Copy { text: "Tanren"; size: 19; font.weight: Font.DemiBold; wrapMode: Text.NoWrap; Accessible.ignored: true }
+                        C.Copy { text: "way"; size: 9; font.weight: Font.Medium; color: ui.colors.sessionLondon; wrapMode: Text.NoWrap; topPadding: 1; Accessible.ignored: true }
+                    }
                 }
                 Repeater {
                     model: root.mainSections
@@ -141,7 +147,7 @@ ApplicationWindow {
                     }
                 }
                 Item { Layout.fillHeight: true }
-                C.Copy { visible: !root.compact; Layout.fillWidth: true; text: "COLLECTOR · " + ui.build.version; secondary: true; size: 11 }
+                C.Copy { visible: !root.compact; Layout.fillWidth: true; text: "BRIDGE · " + ui.build.version; secondary: true; size: 11 }
                 C.Action { objectName: "sidebarUpdate"; visible: !root.compact && ["available","ready"].includes(ui.updateInfo.state); primary: true; text: root.t("updateAvailableShort"); Layout.fillWidth: true; onClicked: root.screenIndex=6 }
                 C.Badge { visible: !root.compact; Layout.minimumWidth: 0; Layout.maximumWidth: 172; Layout.fillWidth: true; label: root.t((ui.state.device || {}).state || "disconnected"); kind: (ui.state.device || {}).state === "paired" ? "positive" : "warning" }
             }
@@ -151,7 +157,7 @@ ApplicationWindow {
             Rectangle {
                 Layout.fillWidth: true; Layout.preferredHeight: 70; color: ui.colors.canvas
                 RowLayout { anchors.fill: parent; anchors.leftMargin: 28; anchors.rightMargin: 28
-                    ColumnLayout { spacing: 3; C.Copy { text: "Tanren Collector"; size: 15; font.weight: Font.DemiBold } C.Copy { text: root.t("workspaceHint"); secondary: true; size: 11 } }
+                    ColumnLayout { spacing: 3; C.Copy { text: "tanrenway Bridge"; size: 15; font.weight: Font.DemiBold } C.Copy { text: root.t("workspaceHint"); secondary: true; size: 11 } }
                     Item { Layout.fillWidth: true }
                     C.Badge { visible: ui.synthetic; Layout.minimumWidth: 0; Layout.maximumWidth: root.compact ? 150 : implicitWidth; label: root.t("syntheticPreview"); kind: "warning" }
                     C.Action { objectName: "browserButton"; text: root.compact ? "" : root.t("browser"); iconName: "external"; onClicked: ui.openBrowser() }
