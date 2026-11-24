@@ -293,8 +293,10 @@ def test_raw_fields_and_no_local_financial_inference():
     assert "risk" not in value and "net_pl" not in value
     with pytest.raises(RuntimeError):
         numeric(float("nan"))
+    # Longer decimals are rounded to the 12-place contract (owner 2026-11-19); range still fails.
+    assert numeric("0.1234567890123") == "0.123456789012"
     with pytest.raises(RuntimeError, match="PRECISION"):
-        numeric("0.1234567890123")
+        numeric("1e26")
 
 
 def test_read_v2_snapshots_current_orders_specs_and_identity_switch():

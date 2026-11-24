@@ -11,10 +11,19 @@ from .terminal import Terminal, initialize_readonly, money, timestamp
 # integer part below 10**26). Three kinds of source numbers meet it differently:
 #
 # * Trade facts (deal, order and position source values: volume, price, deal P/L components,
-#   SL/TP, ...) - numeric(): the double's shortest decimal, exactly. A fact that does not fit fails
-#   the read (SOURCE_PRECISION_UNSUPPORTED / INVALID_SOURCE_NUMBER); it is never rounded or dropped.
+#   SL/TP, ...) - numeric(): the double's shortest decimal, exactly. A double carries 15 significant
+#   decimal digits (DBL_DIG); digits beyond that are binary noise of a value the server computed in
+#   floating point (a commission of 7 x 0.03 arrives as 0.21000000000000002). This artefact is
+#   the server's short value (0.21) and is kept as that (production 2026-11-18: two connections
+#   stopped on one artefact). A fact with more real decimals than the contract keeps (a deal price
+#   that is the broker's average of partial fills, 1.0852333333333333 - production 2026-11-19,
+#   CFT/RLCrates) is rounded half-even to 12 decimal places, an error below 5e-13, far under any
+#   quote, cent or ratio shown (owner decision 2026-11-19: round, a sync must not stop on it). Each
+#   such value is counted per field (ROUNDED_TO_CONTRACT, never the value). Only a fact outside the
+#   contract's range fails the read (SOURCE_PRECISION_UNSUPPORTED, field named); none is dropped.
 # * Live computed values (account equity, floating profit, margin, free margin; open-position
-#   profit, swap and current price; tick value) - measured(): the terminal recomputes them on every
+#   profit, swap, current price and opening price - on a netting account the volume-weighted average
+#   of its deals; tick value) - measured(): the terminal recomputes them on every
 #   tick in binary floating point, so float artefacts such as 0.30000000000000004 or a tick value of
 #   0.6779661016949152 are normal. An artefact (the 15-significant-digit decimal, DBL_DIG, lies
 #   within ARTEFACT_ULPS units in the last place of the double) is removed; otherwise the exact
@@ -44,12 +53,32 @@ def text(decimal):
     return format(value if value != 0 else Decimal(0), "f")
 
 
-def numeric(value):
-    """Trade fact: exact, or the read fails."""
+class SourcePrecisionError(RuntimeError):
+    """A trade fact that does not fit the storage contract; `field` names it (never the value)."""
+
+    def __init__(self, field=None):
+        super().__init__("SOURCE_PRECISION_UNSUPPORTED")
+        self.field = field
+
+
+def numeric(value, field=None, issues=None):
+    """Trade fact: exact; a float artefact is the server's short value; longer decimals are
+    rounded to the contract's 12 places; only an out-of-range fact fails the read."""
     text_value = money(value)
-    if text_value is not None and not fits(Decimal(text_value)):
-        raise RuntimeError("SOURCE_PRECISION_UNSUPPORTED")
-    return text_value
+    if text_value is None:
+        return None
+    decimal = Decimal(text_value)
+    if fits(decimal):
+        return text_value
+    if abs(decimal) >= LIMIT:
+        raise SourcePrecisionError(field)
+    found = issues if issues is not None else []
+    short = artefact_free(decimal)
+    if short is not None:
+        found.append((field or "fact", "FLOAT_ARTEFACT_REMOVED"))
+        return text(short)
+    found.append((field or "fact", "ROUNDED_TO_CONTRACT"))
+    return text(decimal.quantize(QUANTUM, rounding=ROUND_HALF_EVEN))
 
 
 def _source(value, field, issues):
@@ -111,7 +140,11 @@ def reference(value, field, issues):
 
 
 # Per record kind: which observation fields are live values (everything else is a trade fact).
-LIVE_FIELDS = {"position": ("profit", "swap", "price_current"), "order": ("price_current",)}
+# An open position's price_open is the terminal's average on a netting account (deals stay facts).
+LIVE_FIELDS = {
+    "position": ("profit", "swap", "price_current", "price_open"),
+    "order": ("price_current",),
+}
 
 
 def observation(kind, row, issues=None):
@@ -170,12 +203,11 @@ def observation(kind, row, issues=None):
         "price_current",
     ):
         source = getattr(row, field, None)
+        found = issues if issues is not None else []
         if field in LIVE_FIELDS.get(kind, ()):
-            result[field] = measured(
-                source, f"{kind}.{field}", issues if issues is not None else []
-            )
+            result[field] = measured(source, f"{kind}.{field}", found)
         else:
-            result[field] = numeric(source)
+            result[field] = numeric(source, f"{kind}.{field}", found)
     if kind == "order":
         result["volume"] = result["volume_initial"]
         result["price"] = result["price_open"]

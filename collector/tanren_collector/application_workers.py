@@ -417,6 +417,11 @@ def account_turn(
                 ), 0.0
             if action == "sync":
                 store.save("last_capture", 0)
+                # Sync now: pending rows are due immediately and quarantined batches return to
+                # their original FIFO position (a repeat rejection re-quarantines them).
+                store.retry_now()
+            elif action == "requeue":
+                store.requeue_quarantined()
             result = sync.step()
             store.compact()
             counts = store.counts()
@@ -428,7 +433,9 @@ def account_turn(
                 else "unknown"
             )
             stage = (
-                "access_denied"
+                "account_suspended"
+                if error == "ACCOUNT_SUSPENDED"
+                else "access_denied"
                 if error in {"SYNC_PAUSED_HTTP_401", "SYNC_PAUSED_HTTP_403", "SYNC_PAUSED_HTTP_404"}
                 else "waiting"
                 if error
@@ -449,6 +456,8 @@ def account_turn(
                 pending=counts.get("pending", 0),
                 processing=counts.get("received", 0),
                 review=sum(counts.get(k, 0) for k in ("partial", "needs_review", "paused")),
+                quarantined=counts.get("quarantined", 0),
+                quarantine_reasons=tuple(sorted(store.quarantine_reasons().items())),
                 force=force,
                 last_observed_at=store.get("last_observed_at"),
                 last_processed_at=store.get("last_processed_at"),

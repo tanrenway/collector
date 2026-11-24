@@ -1,4 +1,4 @@
-#define Version "0.8.0"
+#define Version "0.9.0"
 #ifdef EngineeringBuild
 #define AppIdentity "{{C7E48B92-68D5-4C31-9177-503BA7F62DB8}"
 #define DisplayName "tanrenway Bridge Engineering"
@@ -27,7 +27,7 @@
 AppId={#AppIdentity}
 AppName={#DisplayName}
 AppVersion={#Version}
-VersionInfoVersion=0.8.0.0
+VersionInfoVersion=0.9.0.0
 AppVerName={#DisplayName} {#Version}
 DefaultDirName={localappdata}\Programs\{#InstallFolder}
 DefaultGroupName={#GroupName}

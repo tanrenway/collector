@@ -76,6 +76,8 @@ class AccountView:
     pending: int = 0
     processing: int = 0
     review: int = 0
+    quarantined: int = 0  # Batches the server permanently rejected; kept locally, not sent.
+    quarantine_reasons: tuple[tuple[str, int], ...] = ()  # (reason code, count); no payloads.
     force: tuple[ForceView, ...] = ()
     retry_after_seconds: int = 30
     error: str | None = None

@@ -23,8 +23,12 @@ def safe_error(exc):
     ):
         return "QUEUE_CAPACITY_REACHED"
     code = str(exc)
+    if code == "SYNC_PAUSED_HTTP_403" and getattr(exc, "server_code", None) == "ACCOUNT_SUSPENDED":
+        # The owner's tanrenway account is suspended: pause and keep the queue; never "pair again".
+        return "ACCOUNT_SUSPENDED"
     # Arbitrary exception messages/paths, bridge last_error and HTTP bodies are NEVER diagnostics.
     known = {
+        "ACCOUNT_SUSPENDED",
         "RUNTIME_BUSY",
         "ACCOUNT_PREVIEW_REQUIRED",
         "REGISTERED_IDENTITY_IMMUTABLE",
@@ -51,6 +55,7 @@ def safe_error(exc):
         "QUEUE_CAPACITY_REACHED",
         "QUEUE_CHECKSUM_MISMATCH",
         "QUEUE_CORRUPT",
+        "QUEUE_SCHEMA_MISMATCH",
         "MT5_BRIDGE_UNAVAILABLE",
         "MT5_NATIVE_LOAD_FAILED",
         "CHILD_PROCESS_TIMEOUT",

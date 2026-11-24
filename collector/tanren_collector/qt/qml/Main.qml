@@ -41,6 +41,7 @@ ApplicationWindow {
         // Q-01: without an authorised device nothing syncs — never show a green "Syncing".
         if ((ui.state.device || {}).state!=="paired") return {label:t("statusDevicePaused"),kind:"warning"}
         if (a.stage==="paused") return {label:t("statusPaused"),kind:"neutral"}
+        if (a.stage==="account_suspended") return {label:t("statusSuspended"),kind:"warning"}
         if (["authorization_required","awaiting_handover","continuity_review","access_denied"].includes(a.stage)) return {label:t("statusAction"),kind:"warning"}
         if (a.stage==="waiting" || a.error) return {label:t("statusRetrying"),kind:"warning"}
         if (a.role==="standby") return {label:t("statusStandby"),kind:"neutral"}
@@ -51,7 +52,7 @@ ApplicationWindow {
         const rows=ui.state.accounts || []
         if ((ui.state.device || {}).state!=="paired") return {title:t("overviewNoDevice"),hint:t("overviewNoDeviceHint"),kind:"warning"}
         if (rows.length===0) return {title:t("overviewEmpty"),hint:t("overviewEmptyHint"),kind:"neutral"}
-        if (rows.some(a => accountStatus(a).kind==="warning" || a.review>0)) return {title:t("overviewAttention"),hint:t("overviewAttentionHint"),kind:"warning"}
+        if (rows.some(a => accountStatus(a).kind==="warning" || a.review>0 || a.quarantined>0)) return {title:t("overviewAttention"),hint:t("overviewAttentionHint"),kind:"warning"}
         if (rows.every(a => a.stage==="paused")) return {title:t("overviewPaused"),hint:t("overviewPausedHint"),kind:"neutral"}
         return {title:t("overviewOk"),hint:t("overviewOkHint"),kind:"positive"}
     }
@@ -257,6 +258,7 @@ ApplicationWindow {
                                     C.Copy { text: root.t("lastSync")+": "+ui.time(modelData.last_observed_at); secondary: true; Layout.fillWidth: true }
                                     C.Copy { visible: !!modelData.error; text: ui.explain(modelData.error || ""); color: ui.colors.warning; Layout.fillWidth: true }
                                     C.Copy { visible: modelData.review>0; text: root.t("needs_review"); color: ui.colors.warning; Layout.fillWidth: true }
+                                    C.Copy { visible: modelData.quarantined>0; text: root.t("quarantined"); color: ui.colors.warning; Layout.fillWidth: true }
                                     C.Action { text: root.t("details"); onClicked: root.select(modelData.binding_id) }
                                 }
                             }
@@ -277,6 +279,7 @@ ApplicationWindow {
                                     C.Copy { visible: modelData.role==="standby"; text: root.t("standbyHelp"); secondary: true; Layout.fillWidth: true }
                                     C.Copy { visible: !!modelData.error; text: ui.explain(modelData.error || ""); color: ui.colors.warning; Layout.fillWidth: true }
                                     C.Copy { visible: modelData.review>0; text: root.t("needs_review"); color: ui.colors.warning; Layout.fillWidth: true }
+                                    C.Copy { visible: modelData.quarantined>0; text: root.t("quarantined"); color: ui.colors.warning; Layout.fillWidth: true }
                                     Flow { spacing: 8; Layout.fillWidth: true
                                         C.Action { text: root.t("details"); onClicked: root.select(modelData.binding_id) }
                                         C.Action { visible: modelData.stage!=="paused"; text: root.t("pause"); onClicked: ui.accountAction(modelData.binding_id,"pause") }
@@ -346,6 +349,18 @@ ApplicationWindow {
                                 RowLayout { Layout.fillWidth: true; spacing: 10; C.Copy { text: ui.selected.name || root.t("accounts"); size: 20; font.weight: Font.DemiBold; Layout.fillWidth: true } C.Badge { label: root.accountStatus(ui.selected).label; kind: root.accountStatus(ui.selected).kind } }
                                 C.Copy { visible: !!ui.selected.error; text: ui.explain(ui.selected.error || ""); color: ui.colors.warning; Layout.fillWidth: true }
                                 C.Copy { visible: ui.selected.review>0; text: root.t("needs_review"); color: ui.colors.warning; Layout.fillWidth: true }
+                                // Quarantined batches: plain-language reason + count only, never payloads or codes.
+                                ColumnLayout { objectName: "quarantineCard"; visible: (ui.selected.quarantined || 0)>0; Layout.fillWidth: true; spacing: 8
+                                    C.Copy { text: root.t("quarantineTitle"); color: ui.colors.warning; font.weight: Font.DemiBold; Layout.fillWidth: true }
+                                    C.Copy { text: root.t("quarantineHint"); secondary: true; Layout.fillWidth: true }
+                                    Repeater { model: ui.selected.quarantine_reasons || []
+                                        C.Copy { required property var modelData; text: "• "+ui.quarantineReason(String(modelData[0]))+" · "+root.t("quarantineParts")+": "+modelData[1]; Layout.fillWidth: true }
+                                    }
+                                    Flow { Layout.fillWidth: true; spacing: 10
+                                        C.Action { objectName: "requeueButton"; primary: true; iconName: "sync"; text: root.t("requeue"); onClicked: ui.accountAction(ui.selected.binding_id,"requeue") }
+                                        C.Action { objectName: "quarantineExport"; iconName: "support"; text: root.t("export"); onClicked: ui.exportDiagnostics() }
+                                    }
+                                }
                                 Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: ui.colors.grid; Accessible.ignored: true }
                                 GridLayout { Layout.fillWidth: true; columns: root.compact ? 1 : 2; columnSpacing: 32; rowSpacing: 18
                                     C.Fact { objectName: "factSync"; label: root.t("lastSync"); value: ui.time(ui.selected.last_observed_at); Layout.fillWidth: true; Layout.preferredWidth: 1 }

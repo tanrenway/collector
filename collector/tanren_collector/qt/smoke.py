@@ -269,6 +269,37 @@ def exercise(app, engine, window, bridge, service, directory=None):
     # Presentation-only missing/revoked/offline/suspended snapshots. Never financial fixtures.
     from .synthetic import fixture
 
+    # Quarantined batches: reasons in plain language, "Send again" re-queues, report export.
+    state = json.loads(json.dumps(fixture()))
+    state["accounts"][0].update(
+        quarantined=2, quarantine_reasons=[["HTTP_413", 1], ["HTTP_422:INVALID_INPUT", 1]]
+    )
+    service.state = state
+    bridge.updateState(json.loads(json.dumps(state)))
+    bridge.selectAccount(BINDINGS[0])
+    window.setProperty("screenIndex", 4)
+    spin()
+    layout()
+    if not named("quarantineCard").property("visible"):
+        raise AssertionError("Quarantine card hidden")
+    if directory:
+        window.grabWindow().save(str(Path(directory) / "uk-quarantine-details.png"))
+    click("requeueButton")
+    if service.calls[-1] != "account" or bridge.selected.get("quarantined"):
+        raise AssertionError("Requeue failed")
+    if named("quarantineCard").property("visible"):
+        raise AssertionError("Quarantine card stayed after requeue")
+    # Suspended tanrenway account (403 ACCOUNT_SUSPENDED): paused, queue kept, no "pair again".
+    state = json.loads(json.dumps(fixture()))
+    state["accounts"][0].update(stage="account_suspended", error="ACCOUNT_SUSPENDED", pending=3)
+    bridge.updateState(state)
+    spin()
+    layout()
+    if bridge.explain("ACCOUNT_SUSPENDED") != bridge.words["suspendedHelp"]:
+        raise AssertionError("Suspended account shows the wrong help")
+    if directory:
+        window.grabWindow().save(str(Path(directory) / "uk-account-suspended.png"))
+
     for device_state in ["authorization_required", "locally_revoked", "error", "disconnected"]:
         state = json.loads(json.dumps(fixture()))
         state["device"] = {"state": device_state, "error": "SYNC_PAUSED_HTTP_401"}

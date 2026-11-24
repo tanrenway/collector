@@ -389,10 +389,14 @@ class Bridge(QObject):
     @Slot(str, result=str)
     def explain(self, code):
         key = (
-            "busyHelp"
+            "suspendedHelp"
+            if code == "ACCOUNT_SUSPENDED"
+            else "busyHelp"
             if code in {"RUNTIME_BUSY", "BINDING_BUSY"}
             else "shutdownHelp"
             if code in {"SHUTDOWN_TIMEOUT", "SHUTDOWN_FAILED"}
+            else "schemaHelp"
+            if code == "QUEUE_SCHEMA_MISMATCH"
             else "terminalHelp"
             if "TERMINAL" in code or "MT5_" in code
             else "authHelp"
@@ -414,6 +418,26 @@ class Bridge(QObject):
             else "scopeHelp"
             if "SCOPE" in code
             else "networkHelp"
+        )
+        return self.words[key]
+
+    @Slot(str, result=str)
+    def quarantineReason(self, code):
+        """Plain-language reason for a quarantine code; the code itself is never shown."""
+        key = (
+            "rejectDamaged"
+            if code.startswith("QUEUE_")
+            else "rejectServerFailing"
+            if code.startswith("RETRY_EXHAUSTED")
+            else "rejectTooLarge"
+            if code.startswith("HTTP_413") or code.endswith(":BODY_TOO_LARGE")
+            else "rejectConflict"
+            if "CONFLICT" in code
+            else "rejectOutOfDate"
+            if code.endswith((":SYNC_WINDOW_MISMATCH", ":SYNC_JOB_NOT_FOUND"))
+            else "rejectUnreadable"
+            if code.endswith(":INVALID_INPUT")
+            else "rejectOther"
         )
         return self.words[key]
 
@@ -514,7 +538,7 @@ class Bridge(QObject):
 
     @Slot(str, str, result=bool)
     def accountAction(self, binding, action):
-        if action not in {"activate", "pause", "resume", "step", "sync"}:
+        if action not in {"activate", "pause", "resume", "step", "sync", "requeue"}:
             return False
         try:
             uuid.UUID(binding)

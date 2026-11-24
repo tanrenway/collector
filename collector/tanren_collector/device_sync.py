@@ -23,6 +23,45 @@ ROUTE = re.compile(
 )
 
 
+# Server codes that reject THIS batch's content/provenance (FastAPI ``detail``); retrying the
+# same immutable bytes can never succeed. Everything else (auth, revoked grant, frozen account,
+# lease/handover state, unknown codes) is account-level: keep strict order and retry later.
+BATCH_REJECTED = frozenset(
+    {
+        "INVALID_INPUT",
+        "BODY_TOO_LARGE",
+        "MT5_BATCH_KEY_CONFLICT",
+        "CAPTURE_FRAGMENT_CONFLICT",
+        # Same batch key held under other provenance. The server compares provenance only,
+        # never content, so its copy is no proof of these facts: keep them (quarantine).
+        "CAPTURE_REQUEST_CONFLICT",
+        "SYNC_WINDOW_MISMATCH",
+        "SYNC_JOB_NOT_FOUND",
+    }
+)
+PAUSED = re.compile(r"SYNC_PAUSED_HTTP_([0-9]{3})")
+SERVER_ERROR = re.compile(r"RETRY_HTTP_(5[0-9]{2})")
+EXHAUSTED_AFTER = 86400  # Seconds of 5xx for one batch while the heartbeat still succeeds.
+EXHAUSTED_ATTEMPTS = 10
+
+
+def rejection(exc):
+    """Quarantine reason for a definitive batch-specific HTTP answer, else None.
+
+    A bare 400/409/422 (no API code, e.g. from an intermediary) is never enough to dead-letter
+    facts; a 413 is, because the same bytes can never fit.
+    """
+    if isinstance(exc, ConnectionError):
+        return None  # Timeouts, network loss, 429 and 5xx are transient.
+    match = PAUSED.fullmatch(str(exc))
+    if not match:
+        return None
+    status, code = int(match.group(1)), getattr(exc, "server_code", None)
+    if code in BATCH_REJECTED or status == 413:
+        return "HTTP_" + str(status) + (":" + code if code else "")
+    return None
+
+
 class SyncApi(DeviceApi):
     def allowed_path(self, path):
         return super().allowed_path(path) or bool(ROUTE.fullmatch(path))
@@ -54,7 +93,8 @@ class AccountSync:
         self.epoch = None
         self.role = "unknown"  # Never restore Active from local disk after a restart.
         self.network_after = 0.0
-        self.attempts = 0
+        self.clock = time.time  # Wall clock for durable per-batch backoff in SQLite.
+        self.exhausted = None
         self.chart_after = 0.0
         config = store.get("config")
         if not config or config.get("binding_id") != self.binding:
@@ -145,7 +185,8 @@ class AccountSync:
             self.store.capture = original
 
     def deliver(self):
-        due = self.store.due()
+        now = self.clock()
+        due = self.store.next_delivery(now)
         if not due:
             return None
         key, raw = due
@@ -157,19 +198,44 @@ class AccountSync:
         }
         # Already accepted packets may be retried without a live capture lease. Unaccepted stale
         # packets use an explicit server-issued recovery permit; never rewrite body IDs/cursors.
+        failures = []
         try:
-            receipt = self.api().call(self.prefix + "/batches", {**body, "batch": raw})
-        except RuntimeError as exc:
-            if str(exc) != "SYNC_PAUSED_HTTP_409":
-                raise
-            permit = self.api().call(
-                self.prefix + "/replays", {"epoch": body["epoch"], "batch": raw}
-            )
-            receipt = self.api().call(
-                self.prefix + "/batches",
-                {**body, "batch": raw, "recovery_id": permit["recovery_id"]},
-            )
-        self.store.received(key, receipt)
+            try:
+                receipt = self.api().call(self.prefix + "/batches", {**body, "batch": raw})
+            except RuntimeError as exc:
+                if str(exc) != "SYNC_PAUSED_HTTP_409":
+                    raise
+                failures.append(exc)
+                permit = self.api().call(
+                    self.prefix + "/replays", {"epoch": body["epoch"], "batch": raw}
+                )
+                receipt = self.api().call(
+                    self.prefix + "/batches",
+                    {**body, "batch": raw, "recovery_id": permit["recovery_id"]},
+                )
+            self.store.received(key, receipt)
+        except Exception as exc:
+            verdict = rejection(exc)
+            if verdict is None and failures and str(exc) == "SYNC_PAUSED_HTTP_409":
+                # The replay itself was refused with a definitive 409 (e.g. recovery denied
+                # while the lease is current): the first upload's batch-specific code decides.
+                # Never after auth/grant/network answers or a malformed receipt.
+                if getattr(exc, "server_code", None) == "CAPTURE_RECOVERY_DENIED":
+                    verdict = rejection(failures[0])
+            if verdict:
+                # Dead-letter only this batch: its facts stay on disk, later batches continue
+                # (later fragments of the same window are held, see Store.next_delivery).
+                self.store.quarantine(key, verdict, now)
+                return {"batch_id": key, "delivery_status": "quarantined", "reason": verdict}
+            attempts = self.store.attempts(key) + 1
+            delay = backoff(attempts, getattr(exc, "retry_after", 0))
+            server = SERVER_ERROR.fullmatch(str(exc))
+            self.store.retry(key, safe_error(exc), delay, now, server_error=bool(server))
+            since, streak = self.store.server_streak(key) if server else (None, 0)
+            if since is not None and now - since > EXHAUSTED_AFTER and streak >= EXHAUSTED_ATTEMPTS:
+                # Quarantined by step() only if the heartbeat proves the server is reachable.
+                self.exhausted = (key, "RETRY_EXHAUSTED:HTTP_" + server.group(1), now)
+            raise
         return receipt
 
     def poll_processing(self):
@@ -256,24 +322,55 @@ class AccountSync:
                     self.lease("release")
                 except Exception:
                     self.role = "unknown"
+        capture_errors = list(result["errors"])
+        self.exhausted = None
+        # Delivery, processing polls and the heartbeat are independent: one failing or poisoned
+        # batch must never silence liveness or later uploads.
+        offline = False
         try:
-            self.deliver()
-            self.poll_processing()
-            self.poll_force()
+            outcome = self.deliver()
+            if outcome and outcome.get("delivery_status") == "quarantined":
+                result["quarantined"] = outcome["reason"]
+        except Exception as exc:
+            result["errors"].append(safe_error(exc))
+            # No HTTP answer at all: skip the polls, but still probe liveness with a heartbeat.
+            offline = isinstance(exc, ConnectionError) and not str(exc).startswith("RETRY_HTTP_")
+        for poll in () if offline else (self.poll_processing, self.poll_force):
+            try:
+                poll()
+            except Exception as exc:
+                result["errors"].append(safe_error(exc))
+                if isinstance(exc, ConnectionError):
+                    break
+        counts = self.store.counts()
+        try:
             self.heartbeat(
                 {
-                    "state": "queued" if self.store.counts().get("pending") else "connected",
-                    "queue_depth": self.store.counts().get("pending", 0),
+                    "state": "queued"
+                    if counts.get("pending")
+                    else "needs_attention"
+                    if counts.get("quarantined")
+                    else "connected",
+                    "queue_depth": counts.get("pending", 0),
                     "collector_version": VERSION,
-                    "terminal_connected": self.role == "active" and not result["errors"],
+                    "terminal_connected": self.role == "active" and not capture_errors,
                     "operation": "idle",
                 }
             )
-            self.attempts = 0
+            if self.store.get("v3_network_failures", 0):
+                self.store.save("v3_network_failures", 0)
+            if self.exhausted:
+                # Server reachable, yet this batch kept failing with 5xx for over a day: a
+                # deterministic server-side rejection. Dead-letter it (re-queueable).
+                key, reason, now = self.exhausted
+                self.store.quarantine(key, reason, now, attempted=False)
+                result["quarantined"] = reason
         except Exception as exc:
-            self.attempts += 1
+            # Only a failed liveness call backs off the whole turn; per-batch backoff is durable.
+            failures = self.store.get("v3_network_failures", 0) + 1
+            self.store.save("v3_network_failures", failures)
             self.network_after = self.monotonic() + backoff(
-                self.attempts, getattr(exc, "retry_after", 0)
+                failures, getattr(exc, "retry_after", 0)
             )
             result["errors"].append(safe_error(exc))
         self.charts(result)

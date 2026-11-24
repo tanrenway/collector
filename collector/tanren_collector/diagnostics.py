@@ -2,6 +2,7 @@
 
 import json
 import platform
+import re
 import zipfile
 from datetime import UTC, datetime
 
@@ -10,6 +11,10 @@ from .engine import safe_error
 from .observability import clean, recent
 from .protocol import VERSION
 
+QUARANTINE_REASON = re.compile(
+    r"HTTP_[0-9]{3}(?::[A-Z][A-Z0-9_]{0,63})?|RETRY_EXHAUSTED:HTTP_5[0-9]{2}"
+    r"|QUEUE_CHECKSUM_MISMATCH|QUEUE_PAYLOAD_INVALID"
+)
 ALLOWED_STATES = {
     "connected",
     "syncing",
@@ -53,7 +58,17 @@ def export(destination, statuses):
                         "needs_review",
                         "paused",
                         "cancelled",
+                        "quarantined",
                     }
+                    and isinstance(value, int)
+                    and 0 <= value <= 1000000
+                },
+                # Reason codes only (status + API code), never payloads, ids or free text.
+                "quarantine_reasons": {
+                    key: value
+                    for key, value in list(item.get("quarantine_reasons", {}).items())[:20]
+                    if isinstance(key, str)
+                    and QUARANTINE_REASON.fullmatch(key)
                     and isinstance(value, int)
                     and 0 <= value <= 1000000
                 },

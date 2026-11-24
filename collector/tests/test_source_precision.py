@@ -9,7 +9,14 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
-from tanren_collector.terminal_v2 import RawTerminal, measured, numeric, observation, reference
+from tanren_collector.terminal_v2 import (
+    RawTerminal,
+    SourcePrecisionError,
+    measured,
+    numeric,
+    observation,
+    reference,
+)
 from test_collector import IDENTITY
 from test_v2 import NOW
 
@@ -32,13 +39,49 @@ def fits_contract(text):
     return abs(decimal) < Decimal(10) ** 26 and decimal.as_tuple().exponent >= -12
 
 
-# Trade facts: unchanged strictness.
+# Trade facts: exact, artefacts are short values, longer decimals are rounded, range is enforced.
 
 
-@pytest.mark.parametrize("value", [TICK_VALUE, ARTEFACT, "0.1234567890123", 1e26, -1e26, 1e-13])
-def test_trade_fact_that_does_not_fit_fails_the_read(value):
+@pytest.mark.parametrize("value", [1e26, -1e26])
+def test_trade_fact_out_of_range_fails_the_read(value):
     with pytest.raises(RuntimeError, match="SOURCE_PRECISION_UNSUPPORTED"):
         numeric(value)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    # Real decimals beyond the contract (owner decision 2026-11-19: round, never stop the sync).
+    [
+        (1.0852333333333333, "1.085233333333"),  # a broker's average of partial fills
+        (TICK_VALUE, "0.677966101695"),
+        ("0.1234567890123", "0.123456789012"),
+        ("0.1234567890125", "0.123456789012"),  # half-even
+        (1e-13, "0"),
+    ],
+)
+def test_trade_fact_with_longer_decimals_is_rounded_to_twelve_places(value, expected):
+    issues = []
+    assert numeric(value, "deal.price", issues) == expected
+    assert issues == [("deal.price", "ROUNDED_TO_CONTRACT")]
+
+
+def test_failing_trade_fact_names_its_field_never_the_value():
+    with pytest.raises(SourcePrecisionError) as caught:
+        numeric(1e26, "deal.commission")
+    assert caught.value.field == "deal.commission"
+    assert str(caught.value) == "SOURCE_PRECISION_UNSUPPORTED"
+    assert "1e" not in repr(caught.value.args) and "100000" not in repr(caught.value.args)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    # Server-computed in floating point (production 2026-11-18): the double's 15 significant digits.
+    [(ARTEFACT, "0.3"), (-ARTEFACT, "-0.3"), (10.000000000000002, "10"), (0.07 * 3, "0.21")],
+)
+def test_trade_fact_float_artefact_is_the_servers_short_value(value, expected):
+    issues = []
+    assert numeric(value, "deal.commission", issues) == expected
+    assert issues == [("deal.commission", "FLOAT_ARTEFACT_REMOVED")]
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
@@ -179,14 +222,29 @@ def test_open_position_live_values_are_normalized_and_its_facts_kept():
     assert ("position.price_current", "ROUNDED_TO_CONTRACT") in issues
 
 
-@pytest.mark.parametrize("field", ["price_open", "volume", "sl", "tp"])
-def test_open_position_fact_with_an_artefact_still_fails(field):
-    with pytest.raises(RuntimeError, match="SOURCE_PRECISION_UNSUPPORTED"):
-        observation("position", position(**{field: TICK_VALUE}), [])
+@pytest.mark.parametrize("field", ["volume", "sl", "tp"])
+def test_open_position_fact_with_longer_decimals_is_rounded(field):
+    issues = []
+    value = observation("position", position(**{field: TICK_VALUE}), issues)
+    assert value[field] == "0.677966101695"
+    assert (f"position.{field}", "ROUNDED_TO_CONTRACT") in issues
 
 
-@pytest.mark.parametrize("field", ["price", "volume", "profit", "commission", "swap", "fee"])
-def test_deal_financial_fact_with_an_artefact_fails_the_read(field):
+@pytest.mark.parametrize("field", ["volume", "sl", "tp"])
+def test_open_position_fact_out_of_range_still_fails(field):
+    with pytest.raises(SourcePrecisionError) as caught:
+        observation("position", position(**{field: 1e26}), [])
+    assert caught.value.field == f"position.{field}"
+
+
+def test_netting_average_opening_price_is_a_computed_value():
+    issues = []
+    value = observation("position", position(price_open=1.0852333333333333), issues)
+    assert value["price_open"] == value["price"] == "1.085233333333"
+    assert ("position.price_open", "ROUNDED_TO_CONTRACT") in issues
+
+
+def deal_with(field, value):
     base = dict(
         type=0,
         entry=0,
@@ -202,9 +260,28 @@ def test_deal_financial_fact_with_an_artefact_fails_the_read(field):
         swap=0.0,
         fee=0.0,
     )
-    deal = SimpleNamespace(**{**base, field: ARTEFACT})
-    with pytest.raises(RuntimeError, match="SOURCE_PRECISION_UNSUPPORTED"):
-        observation("deal", deal, [])
+    return SimpleNamespace(**{**base, field: value})
+
+
+@pytest.mark.parametrize("field", ["price", "volume", "profit", "commission", "swap", "fee"])
+def test_deal_fact_with_a_float_artefact_keeps_the_short_value(field):
+    issues = []
+    assert observation("deal", deal_with(field, ARTEFACT), issues)[field] == "0.3"
+    assert (f"deal.{field}", "FLOAT_ARTEFACT_REMOVED") in issues
+
+
+@pytest.mark.parametrize("field", ["price", "volume", "profit", "commission", "swap", "fee"])
+def test_deal_financial_fact_out_of_range_fails_the_read(field):
+    with pytest.raises(SourcePrecisionError) as caught:
+        observation("deal", deal_with(field, 1e26), [])
+    assert caught.value.field == f"deal.{field}"
+
+
+@pytest.mark.parametrize("field", ["price", "volume", "profit", "commission", "swap", "fee"])
+def test_deal_fact_with_longer_decimals_is_rounded(field):
+    issues = []
+    assert observation("deal", deal_with(field, TICK_VALUE), issues)[field] == "0.677966101695"
+    assert (f"deal.{field}", "ROUNDED_TO_CONTRACT") in issues
 
 
 class Bridge:
@@ -320,8 +397,17 @@ def test_read_with_float_artefacts_in_live_values_succeeds_and_records_each():
                 assert fits_contract(value), (record["kind"], key)
 
 
-def test_read_with_a_trade_fact_that_does_not_fit_fails_whole_not_partially():
-    terminal = RawTerminal("C:/MT5/terminal64.exe", IDENTITY, Bridge(deal_price=TICK_VALUE))
+def test_read_with_a_trade_fact_out_of_range_fails_whole_not_partially():
+    terminal = RawTerminal("C:/MT5/terminal64.exe", IDENTITY, Bridge(deal_price=1e26))
     terminal.connect()
     with pytest.raises(RuntimeError, match="SOURCE_PRECISION_UNSUPPORTED"):
         terminal.read(NOW - timedelta(days=1), NOW)
+
+
+def test_read_with_an_average_fill_price_keeps_every_record():
+    terminal = RawTerminal("C:/MT5/terminal64.exe", IDENTITY, Bridge(deal_price=1.0852333333333333))
+    terminal.connect()
+    records = terminal.read(NOW - timedelta(days=1), NOW)
+    deal = next(r for r in records if r["kind"] == "deal")
+    assert deal["price"] == "1.085233333333"
+    assert terminal.issue_counts["deal.price:ROUNDED_TO_CONTRACT"] == 1
