@@ -87,42 +87,43 @@ PAIRS = {
         "Open MetaTrader 5 and sign in to this account. Bridge never changes your login.",
         "Відкрийте MetaTrader 5 і увійдіть у цей рахунок. Bridge не змінює ваш вхід.",
     ),
+    "schemaHelp": (
+        "This account's data was saved by a newer Bridge. Install the latest Bridge; "
+        "nothing has been deleted.",
+        "Дані цього рахунку збережено новішою версією Bridge. Встановіть останній Bridge; "
+        "нічого не видалено.",
+    ),
     "networkHelp": (
         "No connection to tanrenway. Bridge will retry on its own, and your data is safe.",
         "Немає зв’язку з tanrenway. Bridge спробує ще раз сам, ваші дані в безпеці.",
     ),
     "authHelp": (
         (
-            "This computer no longer has access to your tanrenway account: it was unlinked or its "
-            "access was revoked on the website, or the sign-in expired. Your journal is safe. "
-            "Create a new code on the Bridge page of the tanrenway site and pair again."
+            "This computer lost access to your tanrenway account (unlinked on the site or the "
+            "sign-in expired). Your journal is safe. Pair again with a new code from the Bridge "
+            "page on the site."
         ),
         (
-            "Цей комп’ютер більше не має доступу до вашого акаунта tanrenway: його відв’язали чи "
-            "відкликали доступ на сайті, або вхід застарів. Ваш журнал у безпеці. Створіть "
-            "новий код на сторінці Bridge на сайті tanrenway і підключіть комп’ютер знову."
+            "Цей комп’ютер утратив доступ до акаунта tanrenway (його відв’язали на сайті або вхід "
+            "застарів). Журнал у безпеці. Підключіть комп’ютер знову з новим кодом зі сторінки "
+            "Bridge на сайті."
         ),
     ),
     "conflictHelp": (
         (
-            "This MetaTrader 5 account is already linked to another tanrenway account or "
-            "computer. Nothing was changed. Check that you are signed in to the right tanrenway "
-            "account, or unlink the account there first."
+            "This MT5 account is already linked to another tanrenway account or computer. Nothing "
+            "changed. Check which tanrenway account you are signed in to."
         ),
         (
-            "Цей рахунок MetaTrader 5 уже прив’язано до іншого акаунта tanrenway або комп’ютера. "
-            "Нічого не змінено. Перевірте, що ви в правильному акаунті tanrenway, або спершу "
-            "відв’яжіть рахунок там."
+            "Цей рахунок MT5 уже прив’язано до іншого акаунта tanrenway чи комп’ютера. Нічого не "
+            "змінено. Перевірте, в який акаунт tanrenway ви увійшли."
         ),
     ),
     "scopeHelp": (
+        ("This computer can’t sync this account. Change it on the Bridge page on the site."),
         (
-            "This computer is not allowed to send this account. Check which accounts it may "
-            "sync on the Bridge page of the tanrenway site."
-        ),
-        (
-            "Цьому комп’ютеру не дозволено надсилати цей рахунок. Перевірте, які рахунки він "
-            "може синхронізувати, на сторінці Bridge на сайті tanrenway."
+            "Цей комп’ютер не може синхронізувати цей рахунок. Змініть це на сторінці Bridge "
+            "на сайті."
         ),
     ),
     "statusDevicePaused": (
@@ -294,12 +295,10 @@ PAIRS = {
         "цьому комп’ютері, а завершити підключення може допомогти підтримка.",
     ),
     "disconnectWarning": (
-        "Bridge will stop syncing accounts from this computer. Your journal "
-        "stays as it is. To remove access completely, use Bridge on the tanrenway"
-        " site.",
-        "Bridge перестане синхронізувати рахунки з цього комп’ютера. Журнал "
-        "залишиться без змін. Щоб повністю закрити доступ, скористайтеся розділом"
-        " Bridge на сайті tanrenway.",
+        "Sync from this computer stops; your journal stays. To remove access "
+        "completely, use the Bridge page on the site.",
+        "Синхронізація з цього комп’ютера зупиниться; журнал залишиться. Щоб "
+        "повністю закрити доступ, скористайтеся сторінкою Bridge на сайті.",
     ),
     "registered": (
         "Accounts",
@@ -419,6 +418,77 @@ PAIRS = {
         "Some trades need checking on the tanrenway site.",
         "Деякі угоди потрібно перевірити на сайті tanrenway.",
     ),
+    "quarantined": (
+        "tanrenway did not accept some data. It is kept on this PC. Open Account details "
+        "to send it again.",
+        "tanrenway не прийняв частину даних. Вони збережені на цьому ПК. Відкрийте "
+        "«Деталі рахунку», щоб надіслати їх ще раз.",
+    ),
+    "quarantineTitle": (
+        "Data tanrenway did not accept",
+        "Дані, які tanrenway не прийняв",
+    ),
+    "quarantineHint": (
+        "Bridge keeps this data on this PC and keeps syncing everything else. Send it again "
+        "later, or save a report for support.",
+        "Bridge зберігає ці дані на цьому ПК і далі синхронізує все інше. Надішліть їх ще раз "
+        "пізніше або збережіть звіт для підтримки.",
+    ),
+    "quarantineParts": (
+        "Parts",
+        "Частин",
+    ),
+    "requeue": (
+        "Send again",
+        "Надіслати ще раз",
+    ),
+    "rejectDamaged": (
+        "Damaged on this PC",
+        "Пошкоджені на цьому ПК",
+    ),
+    "rejectServerFailing": (
+        "tanrenway could not accept them for over a day",
+        "tanrenway не міг їх прийняти понад добу",
+    ),
+    "rejectTooLarge": (
+        "Too large to send",
+        "Завеликі для надсилання",
+    ),
+    "rejectConflict": (
+        "Differ from data already on tanrenway",
+        "Відрізняються від даних, які вже є в tanrenway",
+    ),
+    "rejectOutOfDate": (
+        "The sync they belonged to has ended",
+        "Синхронізація, до якої вони належали, уже завершилася",
+    ),
+    "rejectUnreadable": (
+        "tanrenway could not read them",
+        "tanrenway не зміг їх прочитати",
+    ),
+    "rejectOther": (
+        "Not accepted by tanrenway",
+        "tanrenway їх не прийняв",
+    ),
+    "account_suspended": (
+        "Account suspended",
+        "Акаунт призупинено",
+    ),
+    "statusSuspended": (
+        "Account suspended",
+        "Акаунт призупинено",
+    ),
+    "suspendedHelp": (
+        "Your tanrenway account is suspended, so syncing is paused. Your data stays on this PC "
+        "and is sent once the account is active again. You do not need to pair again.",
+        "Ваш акаунт tanrenway призупинено, тому синхронізацію зупинено. Дані залишаються на "
+        "цьому ПК і будуть надіслані, щойно акаунт знову стане активним. Повторно підключати "
+        "комп’ютер не потрібно.",
+    ),
+    "activity_accounts_account_suspended": (
+        "Sync paused: tanrenway account suspended",
+        "Синхронізацію зупинено: акаунт tanrenway призупинено",
+    ),
     "partial": (
         "Partly updated",
         "Оновлено частково",
@@ -521,10 +591,8 @@ PAIRS = {
         "Пропфірма або брокер",
     ),
     "howAdd": (
-        "You don’t need to create anything on the site: Bridge adds the "
-        "account for you. Choose any name you like.",
-        "На сайті нічого створювати не потрібно: Bridge додасть рахунок сам. "
-        "Назву можна вказати будь-яку.",
+        "Bridge adds the account to tanrenway for you; any name works.",
+        "Bridge сам додасть рахунок у tanrenway; назва може бути будь-яка.",
     ),
     "chartsHint": (
         "Automatic charts are a separate option in the account settings on the site.",

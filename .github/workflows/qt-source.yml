@@ -38,5 +38,5 @@ jobs:
           tag="qt-source-$QT"
           if gh release view "$tag" >/dev/null 2>&1; then echo "Already published" >&2; exit 1; fi
           gh release create "$tag" --target "$GITHUB_SHA" --title "Qt $QT corresponding source" \
-            --notes "Unmodified Qt $QT and Qt for Python $QT source archives, the corresponding source for the LGPLv3 Qt libraries in Tanren Collector installers built with Qt $QT." \
+            --notes "Unmodified Qt $QT and Qt for Python $QT source archives, the corresponding source for the LGPLv3 Qt libraries in tanrenway Bridge (formerly Tanren Collector) installers built with Qt $QT." \
             --latest=false src/*

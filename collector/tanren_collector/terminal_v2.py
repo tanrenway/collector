@@ -15,9 +15,12 @@ from .terminal import Terminal, initialize_readonly, money, timestamp
 #   decimal digits (DBL_DIG); digits beyond that are binary noise of a value the server computed in
 #   floating point (a commission of 7 x 0.03 arrives as 0.21000000000000002). This artefact is
 #   the server's short value (0.21) and is kept as that (production 2026-11-18: two connections
-#   stopped on one artefact). A fact that still does not fit fails the read
-#   (SOURCE_PRECISION_UNSUPPORTED, with the field named for the log, never the value); it is never
-#   rounded or dropped.
+#   stopped on one artefact). A fact with more real decimals than the contract keeps (a deal price
+#   that is the broker's average of partial fills, 1.0852333333333333 - production 2026-11-19,
+#   CFT/RLCrates) is rounded half-even to 12 decimal places, an error below 5e-13, far under any
+#   quote, cent or ratio shown (owner decision 2026-11-19: round, a sync must not stop on it). Each
+#   such value is counted per field (ROUNDED_TO_CONTRACT, never the value). Only a fact outside the
+#   contract's range fails the read (SOURCE_PRECISION_UNSUPPORTED, field named); none is dropped.
 # * Live computed values (account equity, floating profit, margin, free margin; open-position
 #   profit, swap, current price and opening price - on a netting account the volume-weighted average
 #   of its deals; tick value) - measured(): the terminal recomputes them on every
@@ -59,19 +62,23 @@ class SourcePrecisionError(RuntimeError):
 
 
 def numeric(value, field=None, issues=None):
-    """Trade fact: exact (a float artefact is the server's short value), or the read fails."""
+    """Trade fact: exact; a float artefact is the server's short value; longer decimals are
+    rounded to the contract's 12 places; only an out-of-range fact fails the read."""
     text_value = money(value)
     if text_value is None:
         return None
     decimal = Decimal(text_value)
     if fits(decimal):
         return text_value
-    short = artefact_free(decimal) if abs(decimal) < LIMIT else None
-    if short is None:
+    if abs(decimal) >= LIMIT:
         raise SourcePrecisionError(field)
-    if issues is not None:
-        issues.append((field or "fact", "FLOAT_ARTEFACT_REMOVED"))
-    return text(short)
+    found = issues if issues is not None else []
+    short = artefact_free(decimal)
+    if short is not None:
+        found.append((field or "fact", "FLOAT_ARTEFACT_REMOVED"))
+        return text(short)
+    found.append((field or "fact", "ROUNDED_TO_CONTRACT"))
+    return text(decimal.quantize(QUANTUM, rounding=ROUND_HALF_EVEN))
 
 
 def _source(value, field, issues):

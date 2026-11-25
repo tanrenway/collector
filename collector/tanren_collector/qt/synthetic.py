@@ -129,7 +129,9 @@ class SyntheticService(QObject):
             phase = self.state["registration"]["state"]
         elif action == "account":
             for a in self.state["accounts"]:
-                if a["binding_id"] == body["binding"]:
+                if a["binding_id"] == body["binding"] and body["action"] == "requeue":
+                    a["quarantined"], a["quarantine_reasons"] = 0, []
+                elif a["binding_id"] == body["binding"]:
                     a["stage"] = "paused" if body["action"] == "pause" else "active"
                     a["role"] = "unknown" if body["action"] == "pause" else "active"
         elif action == "migrate":

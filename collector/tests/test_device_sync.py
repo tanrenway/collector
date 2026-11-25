@@ -1,5 +1,6 @@
 """V3 core with real protected SQLite store, mock MT5/server, no Windows claim."""
 
+import time
 import uuid
 from datetime import timedelta
 
@@ -281,7 +282,9 @@ def test_lost_upload_ack_retries_exact_packet_without_duplicate_local_receipt(tm
     server.call = lost
     with pytest.raises(ConnectionError):
         sync.deliver()
-    assert store.due() == (key, original) and store.counts() == {"pending": 1}
+    assert store.due(now=time.time() + 10**6) == (key, original)
+    assert store.counts() == {"pending": 1} and store.attempts(key) == 1
+    sync.clock = lambda: time.time() + 10**6  # Durable per-batch backoff elapsed.
     result = sync.deliver()
     assert result["delivery_status"] == "received" and len(server.receipts) == 1
     sent = [body for path, body in server.calls if path.endswith("/batches")]

@@ -128,7 +128,7 @@ class ApplicationRuntime(Supervisor):
         )
 
     def account_action(self, binding, action):
-        if action not in {"activate", "pause", "resume", "step", "sync"}:
+        if action not in {"activate", "pause", "resume", "step", "sync", "requeue"}:
             raise ValueError("INVALID_RUNTIME_ACTION")
         if self.closed or binding not in self.catalog()["accounts"]:
             raise RuntimeError("ACCOUNT_CONTEXT_MISSING")
@@ -316,7 +316,13 @@ class ApplicationRuntime(Supervisor):
             {
                 "state": "needs_attention" if a.error else "processing",
                 "error": a.error,
-                "queue": {"pending": a.pending, "received": a.processing, "needs_review": a.review},
+                "queue": {
+                    "pending": a.pending,
+                    "received": a.processing,
+                    "needs_review": a.review,
+                    "quarantined": a.quarantined,
+                },
+                "quarantine_reasons": dict(a.quarantine_reasons),
             }
             for a in self.state.accounts
         ]

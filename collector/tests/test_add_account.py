@@ -84,15 +84,27 @@ def test_firm_is_suggested_only_when_named_in_the_identity(broker, server, firm)
     assert suggest_firm(broker, server) == firm
 
 
-def test_firm_list_has_twenty_unique_names():
-    assert len(PROP_FIRMS) == 20 == len(set(PROP_FIRMS))
+def test_firm_list_has_unique_sorted_names():
+    assert len(PROP_FIRMS) == 22 == len(set(PROP_FIRMS))
+    assert list(PROP_FIRMS) == sorted(PROP_FIRMS, key=str.lower)
 
 
-def test_firm_names_match_the_list_on_the_site():
+def test_firm_list_is_exactly_the_list_on_the_site():
+    # Source of truth: `propFirms` in the site's add-account suggestions. Same set both ways.
+    import re
+
     from conftest import monorepo_file
 
     site = monorepo_file("frontend/lib/providers.ts").read_text()
-    assert all(f'"{firm}"' in site for firm in PROP_FIRMS)
+    block = re.search(r"export const propFirms = \[(.*?)\];", site, re.S)
+    assert block, "propFirms list not found on the site"
+    assert set(re.findall(r'"([^"]+)"', block.group(1))) == set(PROP_FIRMS)
+
+
+def test_every_listed_firm_has_a_suggestion_hint():
+    from tanren_collector.prop_firms import _HINTS
+
+    assert set(_HINTS.values()) == set(PROP_FIRMS)
 
 
 @pytest.mark.parametrize(("balance", "expected"), [(10000.0, "10000"), (0.0, None)])

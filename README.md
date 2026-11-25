@@ -1,12 +1,13 @@
-# Tanren Collector
+# tanrenway Bridge
 
-Tanren Collector is a small Windows app that reads your trades from a MetaTrader 5 terminal on
-your computer and sends them to your [Tanren](https://tanrenway.com) trading journal.
+tanrenway Bridge (formerly Tanren Collector) is a small Windows app that reads your trades from a
+MetaTrader 5 terminal on your computer and sends them to your [tanrenway](https://tanrenway.com)
+trader's workspace.
 
 - **Read-only.** It reads account and deal history through the official MetaTrader 5 Python
   package. It never opens, changes or closes positions.
-- **Your MT5 password stays on your computer.** Collector talks to a terminal you are already
-  signed in to. It connects to Tanren with its own device credential, stored with Windows DPAPI.
+- **Your MT5 password stays on your computer.** Bridge talks to a terminal you are already
+  signed in to. It connects to tanrenway with its own device credential, stored with Windows DPAPI.
 - **Open and verifiable.** The installer is built from this repository by GitHub Actions and
   published with a signed build attestation.
 

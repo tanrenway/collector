@@ -234,7 +234,7 @@ def test_full_qml_interactions_and_dpi(scale, tmp_path):
     report = json.loads((tmp_path / "qt-smoke.json").read_text())
     assert report["checks_passed"] and report["spawn_bootstrap"]
     assert report["qml_errors"] == [] and report["device_pixel_ratio"] == float(scale)
-    assert len(list(tmp_path.glob("*.png"))) == 26
+    assert len(list(tmp_path.glob("*.png"))) == 28
 
 
 def test_native_power_dispatch_does_not_confuse_lock_with_sleep(app):
@@ -510,6 +510,39 @@ def test_errors_are_explained_by_cause_not_as_network(app):
     assert bridge.explain("SYNC_PAUSED_HTTP_401") == words["authHelp"]
     assert bridge.explain("NETWORK_TIMEOUT") == words["networkHelp"]
     assert "unlinked" in words["authHelp"]
+    # K37 server: a suspended owner is paused, never asked to pair again.
+    assert bridge.explain("ACCOUNT_SUSPENDED") == words["suspendedHelp"]
+    assert "pair again" in words["suspendedHelp"] and "not need" in words["suspendedHelp"]
+
+
+def test_quarantine_reasons_are_plain_language_in_both_languages(app):
+    import re
+
+    from tanren_collector.qt.bridge import Bridge
+
+    bridge = Bridge(True)
+    codes = {
+        "HTTP_413": "rejectTooLarge",
+        "HTTP_413:BODY_TOO_LARGE": "rejectTooLarge",
+        "HTTP_422:INVALID_INPUT": "rejectUnreadable",
+        "HTTP_409:MT5_BATCH_KEY_CONFLICT": "rejectConflict",
+        "HTTP_409:CAPTURE_REQUEST_CONFLICT": "rejectConflict",
+        "HTTP_404:SYNC_JOB_NOT_FOUND": "rejectOutOfDate",
+        "HTTP_409:SYNC_WINDOW_MISMATCH": "rejectOutOfDate",
+        "RETRY_EXHAUSTED:HTTP_500": "rejectServerFailing",
+        "QUEUE_CHECKSUM_MISMATCH": "rejectDamaged",
+        "QUEUE_PAYLOAD_INVALID": "rejectDamaged",
+        "HTTP_400:SOMETHING_NEW": "rejectOther",
+    }
+    for locale in ("en", "uk"):
+        bridge.updateSettings({"locale": locale})
+        for code, key in codes.items():
+            text = bridge.quarantineReason(code)
+            assert text == bridge.words[key] and "HTTP" not in text and "_" not in text
+            if locale == "uk":
+                assert not re.search("[ыэъё]", text, re.IGNORECASE)  # Ukrainian, never Russian.
+    assert bridge.accountAction("12345678-1234-1234-1234-123456789abc", "requeue")
+    assert not bridge.accountAction("12345678-1234-1234-1234-123456789abc", "delete")
 
 
 def test_update_flow_states_and_shutdown(app, monkeypatch):

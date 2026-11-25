@@ -19,6 +19,7 @@ from tanren_collector.application_workers import (
     discovery_turn,
     registration_turn,
 )
+from tanren_collector.client import PausedError
 from tanren_collector.device_pairing import DeviceStore
 from tanren_collector.legacy_transition import transition_turn
 from tanren_collector.protocol import batches
@@ -221,6 +222,33 @@ def test_discover_register_metadata_retry_and_independent_contexts(root):
     catalog.close()
 
 
+def test_historical_firm_removed_from_the_list_still_round_trips_unchanged(root):
+    # "The Funded Trader" closed and left the offered list (PR #248); data entered before that
+    # stays valid free text: a pending registration resumes and is resent byte-for-byte.
+    from tanren_collector.prop_firms import PROP_FIRMS, suggest_firm
+
+    assert "The Funded Trader" not in PROP_FIRMS
+    assert suggest_firm("The Funded Trader Ltd", "TheFundedTrader-Server") == ""
+    key, _ = selected(root)
+    service = RegistrationService()
+    historical = {**META, "firm": "The Funded Trader", "category": "prop_firm"}
+    pending = registration_turn(
+        root, key, protector=P, factory=service.factory, terminal_factory=Terminal
+    )
+    assert pending.state == "metadata_required"
+    service.lose = True
+    with pytest.raises(ConnectionError):
+        registration_turn(root, key, historical, pending.request_id, P, service.factory, Terminal)
+    result = registration_turn(  # Restart: resumes from the protected local registration state.
+        root, protector=P, factory=service.factory, terminal_factory=Terminal
+    )
+    assert result.state == "created"
+    assert service.calls[-1] == service.calls[-2]
+    assert service.calls[-1]["metadata"]["firm"] == "The Funded Trader"
+    with closing(Store(account_path(root, result.binding_id), P)) as queue:
+        assert queue.get("config")["display_name"] == META["name"]
+
+
 def test_registration_restart_after_server_ack_before_catalog_commit(root, monkeypatch):
     key, _ = selected(root)
     service = RegistrationService()
@@ -342,6 +370,83 @@ def test_restart_grant_denial_offline_queue_and_new_device_cannot_claim_old_cont
         root, r.binding_id, protector=P, factory=server.factory, terminal_factory=Terminal
     )
     assert result.stage == "continuity_review"
+
+
+def test_quarantined_batch_is_visible_per_account_and_sync_now_requeues_it(root):
+    _, _, r, _ = registered(root)
+    allow(root, r.binding_id)
+    server = Server()
+    account_turn(root, r.binding_id, "activate", P, server.factory, Terminal)
+    q = Store(account_path(root, r.binding_id), P)
+    raw = batches(IDENTITY, [], datetime.now(UTC).isoformat(), datetime.now(UTC).isoformat())
+    window = str(uuid.uuid4())
+    q.capture(
+        window,
+        raw,
+        "capture_cursor",
+        raw[0]["scanned_until"],
+        provenance={
+            "binding_id": r.binding_id,
+            "epoch": 1,
+            "window_id": window,
+            "fragment_count": 1,
+        },
+    )
+    q.close()
+    original = server.call
+
+    def rejecting(path, body=None):
+        if path.endswith("/batches") and body["batch"]["batch_id"] == raw[0]["batch_id"]:
+            raise PausedError(422, "INVALID_INPUT")
+        return original(path, body)
+
+    server.call = rejecting
+    view, _ = account_turn(
+        root, r.binding_id, protector=P, factory=server.factory, terminal_factory=Terminal
+    )
+    assert view.quarantined == 1 and view.stage != "access_denied" and view.pending == 0
+    assert asdict(view)["quarantined"] == 1  # The field reaches the Qt service state.
+    assert view.quarantine_reasons == (("HTTP_422:INVALID_INPUT", 1),)
+    server.call = original
+    fixed, _ = account_turn(root, r.binding_id, "sync", P, server.factory, Terminal)
+    assert fixed.quarantined == 0 and raw[0]["batch_id"] in server.receipts
+
+
+def test_requeue_action_and_suspended_owner_stage(root):
+    _, _, r, _ = registered(root)
+    allow(root, r.binding_id)
+    server = Server()
+    account_turn(root, r.binding_id, "activate", P, server.factory, Terminal)
+    q = Store(account_path(root, r.binding_id), P)
+    raw = batches(IDENTITY, [], datetime.now(UTC).isoformat(), datetime.now(UTC).isoformat())
+    window = str(uuid.uuid4())
+    q.capture(
+        window,
+        raw,
+        "capture_cursor",
+        raw[0]["scanned_until"],
+        provenance={
+            "binding_id": r.binding_id,
+            "epoch": 1,
+            "window_id": window,
+            "fragment_count": 1,
+        },
+    )
+    q.quarantine(raw[0]["batch_id"], "HTTP_422:INVALID_INPUT")
+    q.close()
+    original = server.call
+
+    def suspended(path, body=None):
+        raise PausedError(403, "ACCOUNT_SUSPENDED")
+
+    server.call = suspended
+    view, _ = account_turn(root, r.binding_id, "requeue", P, server.factory, Terminal)
+    # Suspended owner: paused with its own stage, queue kept (requeued row back to pending).
+    assert view.stage == "account_suspended" and view.error == "ACCOUNT_SUSPENDED"
+    assert view.pending == 1 and view.quarantined == 0
+    server.call = original
+    view, _ = account_turn(root, r.binding_id, "sync", P, server.factory, Terminal)
+    assert view.stage != "account_suspended" and raw[0]["batch_id"] in server.receipts
 
 
 def test_explicit_legacy_drain_preserves_packet_and_checkpoint(root):

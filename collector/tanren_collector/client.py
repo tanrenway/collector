@@ -1,6 +1,7 @@
 """HTTPS-only device transport; never redirects bearer tokens to another endpoint."""
 
 import json
+import re
 import ssl
 import urllib.error
 import urllib.parse
@@ -13,6 +14,26 @@ class RetryableError(ConnectionError):
     def __init__(self, code, retry_after=0):
         super().__init__(code)
         self.retry_after = retry_after
+
+
+class PausedError(RuntimeError):
+    """A 4xx answer. The message stays SYNC_PAUSED_HTTP_<status> for existing callers."""
+
+    def __init__(self, status, server_code=None):
+        super().__init__("SYNC_PAUSED_HTTP_" + str(status))
+        self.status, self.server_code = status, server_code
+
+
+SERVER_CODE = re.compile(r"[A-Z][A-Z0-9_]{0,63}")
+
+
+def server_code(exc):
+    """Keep only an enum-like ``detail`` code; the body itself is never kept or logged."""
+    try:
+        value = json.loads(exc.read(4096)).get("detail")
+    except Exception:  # noqa: BLE001 - any unreadable body simply has no code
+        return None
+    return value if isinstance(value, str) and SERVER_CODE.fullmatch(value) else None
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -48,7 +69,13 @@ class Api:
             raise ValueError("Collector path not allowed")
         request = urllib.request.Request(  # noqa: S310 - validated HTTPS origin + fixed paths
             self.base + path,
-            data=json.dumps(payload).encode() if payload is not None else None,
+            # Same compact UTF-8 bytes protocol.encoded() measures for the fragment size cap
+            # (spaced separators and \u escapes could push a full fragment past the server limit).
+            data=json.dumps(
+                payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode()
+            if payload is not None
+            else None,
             headers={"Authorization": "Bearer " + self.token, "Content-Type": "application/json"},
             method="POST" if payload is not None else "GET",
         )
@@ -57,7 +84,7 @@ class Api:
                 return json.loads(response.read(2_000_000))
         except urllib.error.HTTPError as exc:
             if exc.code != 429 and exc.code < 500:
-                raise RuntimeError("SYNC_PAUSED_HTTP_" + str(exc.code)) from None
+                raise PausedError(exc.code, server_code(exc)) from None
             # Do not log URLs, response bodies or credentials. Retry same durable payload.
             delay = exc.headers.get("Retry-After", "0") if exc.headers else "0"
             delay = min(int(delay), 86400) if delay.isdecimal() else 0
